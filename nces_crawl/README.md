@@ -5,7 +5,7 @@ This project downloads and combines school data from the National Center for Edu
 ## Project Structure
 
 - `download_schools.py` - Main scraper for public and private schools
-- `combine_data.py` - Combines downloaded Excel files into master CSV files
+- `combine_all_schools.py` - Combines downloaded files into the unified all-K-12 master CSV
 - `public_school_downloads/` - Downloaded public school Excel files (56 states/territories)
 - `private_school_downloads/` - Downloaded private school Excel files (51 states)
 - `public_school_output/` - Master CSV for public schools
@@ -40,12 +40,25 @@ Download private schools:
 python3 download_schools.py --type private
 ```
 
-### Combine Data
-
-After downloading, combine all files into master CSV:
+Download both and build the unified all-K-12 master in one run:
 ```bash
-python3 combine_data.py
+python3 download_schools.py --type all
 ```
+
+### Combine into Unified Master (All K-12 Schools)
+
+Merge already-downloaded public and private files into a single master CSV
+covering all K-12 schools, with a `sector` column. Public and private fields
+are normalized to a shared common core; all sector-specific columns are
+preserved (the other sector's columns are blank per row). Uses only the Python
+standard library (no `lxml`/`pandas` required):
+```bash
+python3 combine_all_schools.py
+```
+
+**Note:** `low_grade`/`high_grade` keep their native encodings — public uses
+`PK`/`KG`/`01`–`12`; private uses PSS numeric grade codes. No cross-sector
+grade conversion is applied.
 
 ## Output Files
 
@@ -62,6 +75,13 @@ python3 combine_data.py
 - **Size**: 6.1 MB
 - **Columns**: 72 (71 data columns + source_file)
 - **Coverage**: All 50 states + DC
+
+### Unified All-K-12 Master CSV
+- **Location**: `all_schools_output/all_schools_master.csv`
+- **Schools**: ~122,936 (100,435 public + 22,501 private)
+- **Size**: ~40 MB
+- **Columns**: 85 (`sector` + `source_file` + 14 normalized core + sector-specific columns)
+- **Coverage**: All 50 states + DC + 5 territories (public), all 50 states + DC (private)
 
 ## Technical Notes
 
