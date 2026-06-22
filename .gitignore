@@ -21,3 +21,6 @@ env/
 outputs/
 *.ckpt
 events.out.tfevents.*
+
+*.xls
+*.jsonl
