@@ -1,0 +1,43 @@
+# GPT-2 Training Configuration
+
+# Experiment name
+experiment_name: "gpt2_training"
+
+# Model configuration
+model_size: "tiny"  # Options: tiny, small, medium, large
+tokenizer_name: "gpt2"
+
+# Random seed for reproducibility
+seed: 42
+
+# Data configuration
+data:
+  train_path: "data/tiny/train.jsonl"
+  val_path: "data/tiny/val.jsonl"
+  block_size: 128  # Sequence length
+  train_batch_size: 32
+  val_batch_size: 32
+  num_workers: 4
+  preprocessing_num_workers: 4
+
+# Training configuration
+training:
+  max_epochs: 10
+  learning_rate: 2.0e-4
+  weight_decay: 0.01
+  warmup_steps: 100
+  gradient_clip_val: 1.0
+  accumulate_grad_batches: 1
+
+  # Hardware settings
+  accelerator: "auto"  # Options: auto, cpu, gpu, mps
+  devices: 1
+  precision: 32  # Options: 32, 16, bf16
+
+  # Logging
+  log_every_n_steps: 10
+  default_root_dir: "outputs"
+
+  # Early stopping (optional)
+  early_stopping: false
+  early_stopping_patience: 3
