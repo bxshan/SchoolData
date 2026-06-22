@@ -1,0 +1,23 @@
+# OS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# Training artifacts (checkpoints, tensorboard logs, etc.)
+outputs/
+*.ckpt
+events.out.tfevents.*
