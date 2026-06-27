@@ -46,17 +46,17 @@ CORE_COLUMNS = [
 PUBLIC_CORE_MAP = {
     "NCES School ID": "school_id",
     "School Name": "school_name",
-    "Low Grade*": "low_grade",
-    "High Grade*": "high_grade",
+    "Low Grade": "low_grade",
+    "High Grade": "high_grade",
     "Street Address": "address",
     "City": "city",
     "State": "state",
     "ZIP": "zip",
-    "County Name*": "county",
+    "County Name": "county",
     "Phone": "phone",
-    "Students*": "total_students",
-    "Teachers*": "teachers",
-    "Student Teacher Ratio*": "student_teacher_ratio",
+    "Students": "total_students",
+    "Teachers": "teachers",
+    "Student Teacher Ratio": "student_teacher_ratio",
     "Type": "type",
 }
 PRIVATE_CORE_MAP = {
@@ -128,7 +128,9 @@ def parse_school_file(path, id_marker):
         logger.warning("  %s: no header row found (marker %r)", path.name, id_marker)
         return None, []
 
-    header = [c.strip() for c in parser.rows[header_idx]]
+    # Strip the trailing "*" footnote marker NCES adds to some public columns
+    # (it varies by export vintage) so core-field matching stays stable.
+    header = [c.strip().rstrip("*").strip() for c in parser.rows[header_idx]]
     id_col = header[0]
     records = []
     for row in parser.rows[header_idx + 1:]:

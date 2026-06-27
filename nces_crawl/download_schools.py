@@ -1,4 +1,3 @@
-# Author: Boxuan Shan + support from Claude Sonnet 4.5
 #!/usr/bin/env python3
 """
 NCES School Scraper (State-by-State)
@@ -15,7 +14,6 @@ Usage:
 import os
 import sys
 import time
-import zipfile
 import argparse
 from pathlib import Path
 import logging
@@ -297,41 +295,26 @@ def download_state_data(driver, state_name, state_code, school_type, download_di
         return None
 
 
-def process_file(filepath, download_dir):
-    """Extract and read Excel file."""
+def process_file(filepath, school_type):
+    """Read an NCES download into a clean DataFrame with real column headers.
+
+    The downloaded .xls files are HTML tables (not real Excel), so they are
+    parsed with the same stdlib HTML parser used for the unified combine.
+    """
+    from combine_all_schools import parse_school_file
+
+    marker = 'NCES School ID' if school_type == 'public' else 'PSS_SCHOOL_ID'
     try:
-        # If zip, extract and rename
-        if filepath.suffix == '.zip':
-            with zipfile.ZipFile(filepath, 'r') as z:
-                excel_files = [f for f in z.namelist() if f.endswith(('.xlsx', '.xls'))]
-                if excel_files:
-                    z.extract(excel_files[0], download_dir)
-                    excel_path = download_dir / excel_files[0]
-
-                    # Rename extracted file to match the zip name
-                    state_name = filepath.stem  # Get name without .zip
-                    new_excel_name = download_dir / f"{state_name}.xlsx"
-                    if excel_path != new_excel_name:
-                        if new_excel_name.exists():
-                            new_excel_name.unlink()
-                        excel_path.rename(new_excel_name)
-                        excel_path = new_excel_name
-                else:
-                    return None
-        else:
-            excel_path = filepath
-
-        # Read Excel - handle both .xlsx and .xls formats
-        try:
-            df = pd.read_excel(excel_path)
-        except:
-            # Try with xlrd engine for older .xls files
-            df = pd.read_excel(excel_path, engine='xlrd')
+        header, records = parse_school_file(Path(filepath), marker)
+        if not records:
+            logger.warning(f"  No rows parsed from {Path(filepath).name}")
+            return None
+        df = pd.DataFrame(records, columns=header)
         logger.info(f"  Read {len(df)} schools")
         return df
 
     except Exception as e:
-        logger.error(f"  Error reading {filepath.name}: {e}")
+        logger.error(f"  Error reading {Path(filepath).name}: {e}")
         return None
 
 
@@ -370,7 +353,7 @@ def main(school_type='public'):
             downloaded = download_state_data(driver, state_name, state_code, school_type, download_dir)
 
             if downloaded:
-                df = process_file(downloaded, download_dir)
+                df = process_file(downloaded, school_type)
                 if df is not None and len(df) > 0:
                     dataframes.append(df)
 
