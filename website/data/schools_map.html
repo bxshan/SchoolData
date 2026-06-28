@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>美国各州 K-12 学校（维基百科条目）分布</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+<style>
+  :root { --bg:#0f1419; --panel:#1a2230; --ink:#e8edf2; --muted:#8b9bb0; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif; }
+  header { padding:24px 28px 8px; }
+  h1 { margin:0 0 4px; font-size:22px; font-weight:650; }
+  .sub { color:var(--muted); font-size:13px; }
+  .wrap { display:flex; gap:20px; padding:12px 28px 36px; flex-wrap:wrap; }
+  .mapcard { background:var(--panel); border-radius:14px; padding:10px 14px 16px;
+             flex:1 1 640px; min-width:340px; }
+  .side { flex:0 1 320px; min-width:260px; }
+  svg { width:100%; height:auto; display:block; }
+  .state { stroke:#0f1419; stroke-width:0.6px; cursor:pointer; transition:opacity .12s; }
+  .state:hover { opacity:.78; }
+  .legend text { fill:var(--muted); font-size:11px; }
+  .tooltip { position:fixed; pointer-events:none; background:#0b0f15; color:#fff;
+             border:1px solid #2a3b4d; border-radius:8px; padding:7px 10px;
+             font-size:13px; opacity:0; transition:opacity .1s; box-shadow:0 6px 18px rgba(0,0,0,.5); }
+  .tooltip b { font-size:14px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { text-align:left; padding:6px 8px; border-bottom:1px solid #283142; }
+  th { color:var(--muted); font-weight:550; cursor:pointer; user-select:none; }
+  td.n { text-align:right; font-variant-numeric:tabular-nums; }
+  .bar { height:8px; border-radius:4px; background:#3b82f6; }
+  .foot { color:var(--muted); font-size:12px; padding:0 28px 28px; }
+  a { color:#6aa9ff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>美国各州 K-12 学校分布（维基百科条目）</h1>
+  <div class="sub" id="subtitle">颜色越深 = 该州拥有维基条目的学校越多。</div>
+</header>
+
+<div class="wrap">
+  <div class="mapcard">
+    <svg id="map" viewBox="0 0 960 600" preserveAspectRatio="xMidYMid meet"></svg>
+    <svg id="legend" viewBox="0 0 460 46" style="max-width:460px"></svg>
+  </div>
+  <div class="side">
+    <table id="ranktable">
+      <thead><tr><th data-k="state">州 ▲▼</th><th data-k="count" class="n">学校数 ▲▼</th><th>占比</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="foot" id="foot"></div>
+<div class="tooltip" id="tt"></div>
+
+<script>
+const COUNTS = {"Alabama": 346, "Alaska": 59, "Arizona": 409, "Arkansas": 474, "California": 2152, "Colorado": 276, "Connecticut": 308, "Delaware": 101, "Florida": 814, "Georgia": 518, "Hawaii": 76, "Idaho": 166, "Illinois": 619, "Indiana": 489, "Iowa": 209, "Kansas": 205, "Kentucky": 309, "Louisiana": 385, "Maine": 188, "Maryland": 335, "Massachusetts": 572, "Michigan": 550, "Minnesota": 291, "Mississippi": 250, "Missouri": 334, "Montana": 73, "Nebraska": 124, "Nevada": 88, "New Hampshire": 118, "New Jersey": 717, "New Mexico": 132, "New York": 980, "North Carolina": 579, "North Dakota": 62, "Ohio": 1002, "Oklahoma": 190, "Oregon": 414, "Pennsylvania": 738, "Rhode Island": 82, "South Carolina": 247, "South Dakota": 60, "Tennessee": 365, "Texas": 1352, "Utah": 150, "Vermont": 61, "Virginia": 615, "Washington": 500, "West Virginia": 274, "Wisconsin": 384, "Wyoming": 50, "District of Columbia": 22};
+
+const total = d3.sum(Object.values(COUNTS));
+const maxV = d3.max(Object.values(COUNTS));
+// Skewed distribution -> threshold scale with hand-picked breaks.
+const breaks = [50, 100, 200, 400, 800, 1600];
+const scheme = d3.schemeBlues[7];
+const color = d3.scaleThreshold().domain(breaks).range(scheme);
+const colorFor = v => (v == null) ? "#2a3344" : color(v);
+
+const tt = d3.select("#tt");
+function showTip(html, e){ tt.html(html).style("opacity",1)
+  .style("left",(e.clientX+14)+"px").style("top",(e.clientY+14)+"px"); }
+function hideTip(){ tt.style("opacity",0); }
+
+d3.select("#subtitle").text(
+  `共 ${total.toLocaleString()} 所学校（有维基条目）分布在 50 州 + DC；颜色越深数量越多。`);
+
+// ---- map ----
+d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json").then(us => {
+  const states = topojson.feature(us, us.objects.states).features;
+  const path = d3.geoPath(d3.geoAlbersUsa().scale(1180).translate([480,300]));
+  const svg = d3.select("#map");
+
+  svg.selectAll("path.state").data(states).join("path")
+    .attr("class","state")
+    .attr("d", path)
+    .attr("fill", d => colorFor(COUNTS[d.properties.name]))
+    .on("mousemove", (e,d) => {
+      const v = COUNTS[d.properties.name];
+      showTip(`<b>${d.properties.name}</b><br>${v==null?"无数据":v.toLocaleString()+" 所学校"}`, e);
+    })
+    .on("mouseleave", hideTip);
+
+  // state labels for counts (only larger states to avoid clutter handled by centroid)
+  buildLegend();
+  buildTable();
+}).catch(err => {
+  d3.select("#map").append("text").attr("x",40).attr("y",60).attr("fill","#f88")
+    .text("地图底图加载失败（可能需要联网/代理访问 cdn.jsdelivr.net）。排名表仍可用。");
+  buildLegend(); buildTable();
+});
+
+// ---- legend ----
+function buildLegend(){
+  const lg = d3.select("#legend");
+  const x = 10, y = 14, w = 56, h = 14;
+  const cats = [["0–49",scheme[0]],["50–99",scheme[1]],["100–199",scheme[2]],
+    ["200–399",scheme[3]],["400–799",scheme[4]],["800–1599",scheme[5]],["≥1600",scheme[6]]];
+  const g = lg.selectAll("g").data(cats).join("g")
+    .attr("transform",(d,i)=>`translate(${x+i*w},${y})`);
+  g.append("rect").attr("width",w-2).attr("height",h).attr("fill",d=>d[1]);
+  g.append("text").attr("x",0).attr("y",h+14).attr("class","legend").text(d=>d[0]);
+  lg.attr("class","legend");
+}
+
+// ---- ranked table ----
+let sortK = "count", sortAsc = false;
+function buildTable(){
+  const tb = d3.select("#ranktable tbody");
+  let data = Object.entries(COUNTS).map(([state,count])=>({state,count}));
+  data.sort((a,b)=> sortK==="state"
+      ? (sortAsc? a.state.localeCompare(b.state) : b.state.localeCompare(a.state))
+      : (sortAsc? a.count-b.count : b.count-a.count));
+  const max = d3.max(data,d=>d.count);
+  tb.selectAll("tr").data(data).join("tr").html(d=>`
+    <td>${d.state}</td>
+    <td class="n">${d.count.toLocaleString()}</td>
+    <td><div class="bar" style="width:${Math.max(3,100*d.count/max)}%;
+        background:${colorFor(d.count)}"></div></td>`)
+    .on("mousemove",(e,d)=>showTip(`<b>${d.state}</b><br>${d.count.toLocaleString()} 所学校（占 ${(100*d.count/total).toFixed(1)}%）`,e))
+    .on("mouseleave",hideTip);
+}
+d3.selectAll("#ranktable th[data-k]").on("click",function(){
+  const k=this.dataset.k; if(k===sortK) sortAsc=!sortAsc; else {sortK=k; sortAsc=(k==="state");}
+  buildTable();
+});
+
+d3.select("#foot").html(
+  `数据来源：本项目维基爬取结果（schools.csv，按 source_category/标题归属到州）。` +
+  `约 3,540 条属于全国性分类、未归入具体州，故不计入州统计。底图：us-atlas / TopoJSON。`);
+</script>
+</body>
+</html>
