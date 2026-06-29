@@ -24,3 +24,13 @@ events.out.tfevents.*
 
 *.xls
 *.jsonl
+
+# Logs
+*.log
+
+# wiki_crawl regenerable intermediates (canonical copies live in website/data/)
+wiki_crawl/schools_new*
+wiki_crawl/wiki_nces_matches.csv
+
+# Local scratch runner (hardcoded absolute paths)
+wiki_crawl/run.sh
