@@ -6,12 +6,13 @@ import { supabase, usingSupabase } from "../lib/supabase";
 type School = {
   i: string; n: string; s: string; c: string; ci: string;
   a?: string; z?: string; d?: string;
+  ph?: string; tf?: number | null; gl?: string; gh?: string; ch?: string; mg?: string;
   lv: string; e: number | null; w: 0 | 1; x: number; y: number;
 };
 
 type Info = {
   type: string; established: string; grades: string; enrollment: string;
-  address: string; zipcode: string; district: string; website: string;
+  address: string; zipcode: string; district: string; website: string; phone: string;
   principal: string; staff: string; ratio: string;
   motto: string; colors: string; mascot: string; team: string;
   conference: string; newspaper: string; yearbook: string;
@@ -19,12 +20,47 @@ type Info = {
   alumni: string; sources: string;
 };
 type Contact = { name: string; email: string; role: string; org: string; consent: boolean };
-type Saved = { school: School; info: Info; contact?: Contact; at: string };
+
+// A pasted reference link the contributor wants us to cite.
+type SourceLink = { url: string; kind: string; note: string };
+// In-form state for "this fact is wrong" (keyed by Info field).
+type FlagState = { on: boolean; corrected: string; source: string };
+type Flags = Partial<Record<keyof Info, FlagState>>;
+// Persisted shape of a single flagged fact.
+type FactFlag = { field: string; label: string; current_value: string; corrected_value: string; source_url: string };
+type Saved = { school: School; facts: Info | null; sources: SourceLink[]; flags: FactFlag[]; contact?: Contact; at: string };
 
 const ROLES = ["Student", "Alumni", "Teacher / staff", "Parent", "Community member", "Other"];
 const LEVEL_WORD: Record<string, string> = { elementary: "elementary", middle: "middle", high: "high", other: "" };
 const LEVEL_GRADES: Record<string, string> = { elementary: "K–5", middle: "6–8", high: "9–12", other: "K–12" };
 const emptyContact: Contact = { name: "", email: "", role: "Student", org: "", consent: false };
+
+// The verifiable, scalar facts we show read-only and let people flag.
+const FACT_FIELDS: { k: keyof Info; label: string }[] = [
+  { k: "type", label: "Type" },
+  { k: "established", label: "Established" },
+  { k: "grades", label: "Grades" },
+  { k: "enrollment", label: "Enrollment" },
+  { k: "address", label: "Street address" },
+  { k: "zipcode", label: "ZIP code" },
+  { k: "district", label: "School district" },
+  { k: "website", label: "Website" },
+  { k: "phone", label: "Phone" },
+  { k: "principal", label: "Principal" },
+  { k: "staff", label: "Teaching staff" },
+  { k: "ratio", label: "Student–teacher ratio" },
+  { k: "motto", label: "Motto" },
+  { k: "colors", label: "School colors" },
+  { k: "mascot", label: "Mascot" },
+  { k: "team", label: "Team / nickname" },
+  { k: "conference", label: "Athletic conference" },
+];
+const SOURCE_KINDS = ["School homepage", "News article", "Official school material", "Other"];
+const emptySource = (): SourceLink => ({ url: "", kind: SOURCE_KINDS[0], note: "" });
+// Accept a bare domain too (e.g. "school.org/about"); the scheme is optional.
+const isUrl = (u: string) => /^(https?:\/\/)?([\w-]+\.)+[a-z]{2,}(\/\S*)?$/i.test(u.trim());
+// Normalize for storage: add https:// when the contributor omitted the scheme.
+const normUrl = (u: string) => { const t = u.trim(); return /^https?:\/\//i.test(t) ? t : `https://${t}`; };
 
 const WP_API = "https://en.wikipedia.org/w/api.php";
 
@@ -69,11 +105,14 @@ function parseInfobox(wt: string): Record<string, string> {
 function templateInfo(s: School): Info {
   const lvl = LEVEL_WORD[s.lv] || "";
   const where = [s.ci, s.s].filter(Boolean).join(", ");
+  const type = ["Public", s.ch === "Yes" ? "charter" : "", s.mg === "Yes" ? "magnet" : ""].filter(Boolean).join(" ");
+  const grades = s.gl && s.gh ? `${s.gl}–${s.gh}` : (LEVEL_GRADES[s.lv] || "");
+  const ratio = s.e && s.tf ? `${(s.e / s.tf).toFixed(1)}:1` : "";
   return {
-    type: "Public", established: "", grades: LEVEL_GRADES[s.lv] || "",
+    type, established: "", grades,
     enrollment: s.e != null ? String(s.e) : "",
-    address: s.a || "", zipcode: s.z || "", district: s.d || "", website: "",
-    principal: "", staff: "", ratio: "",
+    address: s.a || "", zipcode: s.z || "", district: s.d || "", website: "", phone: s.ph || "",
+    principal: "", staff: s.tf != null ? String(s.tf) : "", ratio,
     motto: "", colors: "", mascot: "", team: "",
     conference: "", newspaper: "", yearbook: "",
     lead: `${s.n} is a public ${lvl ? lvl + " " : ""}school${where ? ` in ${where}` : ""}.`,
@@ -92,6 +131,7 @@ function fromWiki(s: School, res: { wikitext: string; extract: string }): Info {
     zipcode: g("zipcode", "postcode", "postalcode") || base.zipcode,
     district: g("district", "schoolboard") || base.district,
     website: g("website", "homepage"),
+    phone: g("telephone", "phone") || base.phone,
     principal: g("principal", "head", "headteacher", "headofschool"),
     staff: g("teaching_staff", "staff", "faculty"),
     ratio: g("ratio"),
@@ -114,6 +154,8 @@ function fromWiki(s: School, res: { wikitext: string; extract: string }): Info {
 export default function ContributorPanel({ school, onClose }: { school: School; onClose: () => void }) {
   const [step, setStep] = useState<"contribute" | "contact" | "done">("contribute");
   const [info, setInfo] = useState<Info | null>(null);
+  const [flags, setFlags] = useState<Flags>({});
+  const [sources, setSources] = useState<SourceLink[]>([emptySource()]);
   const [contact, setContact] = useState<Contact>(emptyContact);
   const [saved, setSaved] = useState<Saved | null>(null);
   const [loading, setLoading] = useState(true);
@@ -124,9 +166,20 @@ export default function ContributorPanel({ school, onClose }: { school: School; 
     let cancelled = false;
     setStep("contribute"); setInfo(null); setContact(emptyContact); setSaved(null);
     setLoading(true); setWikiTitle(null);
+    setFlags({}); setSources([emptySource()]);
 
     const prev = localStorage.getItem("contrib:" + school.i);
-    if (prev) { try { const p = JSON.parse(prev); setSaved(p); setInfo(p.info); setStep("done"); setLoading(false); return; } catch {} }
+    if (prev) {
+      try {
+        const p = JSON.parse(prev) as Saved;
+        setSaved(p); setInfo(p.facts);
+        const rf: Flags = {};
+        (p.flags || []).forEach((f) => { rf[f.field as keyof Info] = { on: true, corrected: f.corrected_value, source: f.source_url }; });
+        setFlags(rf);
+        setSources(p.sources?.length ? p.sources : [emptySource()]);
+        setStep("done"); setLoading(false); return;
+      } catch {}
+    }
 
     if (school.w) {
       fetchWiki(school.n)
@@ -137,12 +190,36 @@ export default function ContributorPanel({ school, onClose }: { school: School; 
     return () => { cancelled = true; };
   }, [school.i]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function setI<K extends keyof Info>(k: K, v: string) { setInfo((f) => (f ? { ...f, [k]: v } : f)); }
   function setC<K extends keyof Contact>(k: K, v: Contact[K]) { setContact((c) => ({ ...c, [k]: v })); }
+
+  function toggleFlag(k: keyof Info) {
+    setFlags((f) => {
+      if (f[k]?.on) { const { [k]: _drop, ...rest } = f; return rest; }
+      return { ...f, [k]: { on: true, corrected: "", source: "" } };
+    });
+  }
+  function setFlag(k: keyof Info, patch: Partial<FlagState>) {
+    setFlags((f) => ({ ...f, [k]: { ...(f[k] ?? { on: true, corrected: "", source: "" }), ...patch } }));
+  }
+  function setSrc(i: number, patch: Partial<SourceLink>) { setSources((s) => s.map((row, idx) => (idx === i ? { ...row, ...patch } : row))); }
+  function addSrc() { setSources((s) => [...s, emptySource()]); }
+  function removeSrc(i: number) { setSources((s) => (s.length > 1 ? s.filter((_, idx) => idx !== i) : s)); }
+
+  const filledSources = sources.filter((s) => s.url.trim());
+  const activeFlags = (Object.entries(flags) as [keyof Info, FlagState][]).filter(([, v]) => v?.on);
+  const sourcesValid = filledSources.every((s) => isUrl(s.url));
+  const flagsValid = activeFlags.every(([, v]) => isUrl(v.source)); // source required per flag
+  const hasContribution = filledSources.length > 0 || activeFlags.length > 0;
+  const canSubmit = hasContribution && sourcesValid && flagsValid;
 
   async function persist(withContact?: Contact) {
     if (!info) return;
-    const rec: Saved = { school, info, contact: withContact, at: new Date().toLocaleDateString() };
+    const cleanSources: SourceLink[] = filledSources.map((s) => ({ url: normUrl(s.url), kind: s.kind, note: s.note.trim() }));
+    const cleanFlags: FactFlag[] = activeFlags.map(([k, v]) => ({
+      field: k, label: FACT_FIELDS.find((f) => f.k === k)?.label ?? k,
+      current_value: String(info[k] ?? ""), corrected_value: v.corrected.trim(), source_url: normUrl(v.source),
+    }));
+    const rec: Saved = { school, facts: info, sources: cleanSources, flags: cleanFlags, contact: withContact, at: new Date().toLocaleDateString() };
     // local cache for offline resume
     localStorage.setItem("contrib:" + school.i, JSON.stringify(rec));
     // cloud (only if Supabase is configured)
@@ -151,6 +228,7 @@ export default function ContributorPanel({ school, onClose }: { school: School; 
         nces_id: school.i, school_name: school.n, school_state: school.s,
         school_city: school.ci, school_lat: school.y, school_lon: school.x,
         has_wikipedia: !!school.w, info,
+        source_links: cleanSources, fact_flags: cleanFlags,
         contact_name: withContact?.name ?? null,
         contact_email: withContact?.email?.trim().toLowerCase() ?? null,
         contact_role: withContact?.role ?? null,
@@ -189,71 +267,74 @@ export default function ContributorPanel({ school, onClose }: { school: School; 
       </div>
 
       {loading || !info ? (
-        <div className="ed-loading">{school.w ? "Loading existing article…" : "Preparing…"}</div>
+        <div className="ed-loading">{school.w ? "Loading what we have…" : "Preparing…"}</div>
       ) : step === "contribute" ? (
         <>
           <p className="ed-intro">
-            {school.w
-              ? "Help improve what we know about this school. We pulled the current article — verify and add facts. (No Wikipedia editing here.)"
-              : "Share what you know about this school. Anything helps build the public record — sources especially."}
+            Don&apos;t rewrite the article — help us <b>verify</b> it. Add links we can
+            cite, and flag anything below that looks wrong. Every correction needs a source.
           </p>
-          <div className="ed-section-title">Basics <span className="opt">infobox</span></div>
-          <div className="ed-grid">
-            <L k="Type"><input value={info.type} onChange={(e) => setI("type", e.target.value)} placeholder="Public / Private / Charter" /></L>
-            <L k="Established"><input value={info.established} onChange={(e) => setI("established", e.target.value)} placeholder="year" /></L>
-            <L k="Grades"><input value={info.grades} onChange={(e) => setI("grades", e.target.value)} /></L>
-            <L k="Enrollment"><input value={info.enrollment} onChange={(e) => setI("enrollment", e.target.value)} /></L>
+
+          <div className="ed-group">What we have <span className="opt">tick anything wrong</span></div>
+          <div className="ed-facts">
+            {FACT_FIELDS.map(({ k, label }) => {
+              const val = String(info[k] ?? "").trim();
+              const fl = flags[k];
+              return (
+                <div className={`fact-row${fl?.on ? " flagged" : ""}`} key={k}>
+                  <label className="fact-head">
+                    <input type="checkbox" checked={!!fl?.on} onChange={() => toggleFlag(k)} />
+                    <span className="fact-label">{label}</span>
+                    <span className="fact-val">{val || <em>unknown</em>}</span>
+                  </label>
+                  {fl?.on && (
+                    <div className="fact-fix">
+                      <L k="Correct value">
+                        <input value={fl.corrected} onChange={(e) => setFlag(k, { corrected: e.target.value })}
+                          placeholder={val ? "what it should be (optional)" : "the right value (optional)"} />
+                      </L>
+                      <L k="Source — required">
+                        <input value={fl.source} onChange={(e) => setFlag(k, { source: e.target.value })}
+                          className={fl.source && !isUrl(fl.source) ? "bad" : ""} placeholder="https://…" />
+                      </L>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
-          <div className="ed-section-title">Location & contact</div>
-          <div className="ed-grid">
-            <L k="Street address"><input value={info.address} onChange={(e) => setI("address", e.target.value)} /></L>
-            <L k="ZIP code"><input value={info.zipcode} onChange={(e) => setI("zipcode", e.target.value)} /></L>
-            <L k="School district"><input value={info.district} onChange={(e) => setI("district", e.target.value)} /></L>
-            <L k="Website"><input value={info.website} onChange={(e) => setI("website", e.target.value)} placeholder="https://" /></L>
+          <div className="ed-group">Add sources <span className="req">links we can cite</span></div>
+          <p className="ed-hint">School homepage, local news coverage, or the school&apos;s own materials. These become the article&apos;s citations.</p>
+          <div className="ed-sources">
+            {sources.map((s, i) => (
+              <div className="src-row" key={i}>
+                <div className="src-line">
+                  <select value={s.kind} onChange={(e) => setSrc(i, { kind: e.target.value })}>
+                    {SOURCE_KINDS.map((x) => <option key={x}>{x}</option>)}
+                  </select>
+                  <input value={s.url} onChange={(e) => setSrc(i, { url: e.target.value })}
+                    className={s.url && !isUrl(s.url) ? "bad" : ""} placeholder="https://…" />
+                  {sources.length > 1 && <button className="src-del" onClick={() => removeSrc(i)} title="Remove">×</button>}
+                </div>
+                <input className="src-note" value={s.note} onChange={(e) => setSrc(i, { note: e.target.value })}
+                  placeholder="What does this support? (optional)" />
+              </div>
+            ))}
+            <button className="ghost src-add" onClick={addSrc}>+ Add another source</button>
           </div>
 
-          <div className="ed-section-title">People & size</div>
-          <div className="ed-grid">
-            <L k="Principal"><input value={info.principal} onChange={(e) => setI("principal", e.target.value)} placeholder="name" /></L>
-            <L k="Teaching staff"><input value={info.staff} onChange={(e) => setI("staff", e.target.value)} placeholder="# teachers (FTE)" /></L>
-            <L k="Student–teacher ratio"><input value={info.ratio} onChange={(e) => setI("ratio", e.target.value)} placeholder="e.g. 18:1" /></L>
-          </div>
-
-          <div className="ed-section-title">Identity & athletics</div>
-          <div className="ed-grid">
-            <L k="Motto"><input value={info.motto} onChange={(e) => setI("motto", e.target.value)} /></L>
-            <L k="School colors"><input value={info.colors} onChange={(e) => setI("colors", e.target.value)} /></L>
-            <L k="Mascot"><input value={info.mascot} onChange={(e) => setI("mascot", e.target.value)} /></L>
-            <L k="Team / nickname"><input value={info.team} onChange={(e) => setI("team", e.target.value)} /></L>
-            <L k="Athletic conference"><input value={info.conference} onChange={(e) => setI("conference", e.target.value)} /></L>
-            <L k="Newspaper"><input value={info.newspaper} onChange={(e) => setI("newspaper", e.target.value)} /></L>
-            <L k="Yearbook"><input value={info.yearbook} onChange={(e) => setI("yearbook", e.target.value)} /></L>
-          </div>
-
-          <div className="ed-group">Article body <span className="opt">what the article text needs</span></div>
-          <div className="ed-section-title">Lead / introduction</div>
-          <textarea rows={3} value={info.lead} onChange={(e) => setI("lead", e.target.value)} />
-          <div className="ed-section-title">History <span className="opt">most common section</span></div>
-          <textarea rows={4} value={info.history} onChange={(e) => setI("history", e.target.value)} placeholder="Founding year, milestones, renamings, notable events…" />
-          <div className="ed-section-title">Academics</div>
-          <textarea rows={3} value={info.academics} onChange={(e) => setI("academics", e.target.value)} placeholder="Programs, AP/IB, curriculum, rankings…" />
-          <div className="ed-section-title">Athletics</div>
-          <textarea rows={3} value={info.athletics} onChange={(e) => setI("athletics", e.target.value)} placeholder="Teams, conference, state titles, rivalries…" />
-          <div className="ed-section-title">Notable alumni</div>
-          <textarea rows={3} value={info.alumni} onChange={(e) => setI("alumni", e.target.value)} placeholder="One per line — Name — what they're known for" />
-
-          <div className="ed-group">References <span className="req">required — aim for 3+</span></div>
-          <p className="ed-hint">A typical school article cites ~6 sources, mostly news articles and official pages. Paste links (one per line); these become the citations.</p>
-          <textarea rows={4} value={info.sources} onChange={(e) => setI("sources", e.target.value)} placeholder={"https://district.org/school-page\nhttps://localnews.com/article-about-the-school\n…"} />
-          <button className="cta" onClick={() => setStep("contact")}>Submit contribution →</button>
+          <button className="cta" disabled={!canSubmit} onClick={() => setStep("contact")}>Submit contribution →</button>
+          {!hasContribution
+            ? <p className="ed-hint">Add at least one source or flag a fact to continue.</p>
+            : !canSubmit && <p className="ed-hint">Every flagged fact and source link needs a valid https:// link.</p>}
         </>
       ) : step === "contact" ? (
         <>
           <div className="vol-thanks">✓ Contribution recorded for this school.</div>
           <p className="ed-intro">
             Optionally leave your contact info to receive <b>volunteer hours</b> for
-            this contribution. You can also skip — your info above is saved either way.
+            this contribution. You can also skip — your input above is saved either way.
           </p>
           <div className="ed-section-title">Contact <span className="opt">optional</span></div>
           <L k="Full name"><input value={contact.name} onChange={(e) => setC("name", e.target.value)} placeholder="Jane Doe" /></L>
@@ -275,7 +356,9 @@ export default function ContributorPanel({ school, onClose }: { school: School; 
         <div className="vol-confirm">
           <div className="vol-check">✓</div>
           <h3>Thanks for contributing!</h3>
-          <p>Your information for <b>{school.n}</b> was saved{saved?.at ? ` on ${saved.at}` : ""}.</p>
+          <p>
+            Your {summarize(saved)} for <b>{school.n}</b> {saved?.at ? `was saved on ${saved.at}` : "was saved"}.
+          </p>
           {saved?.contact ? (
             <div className="vol-hours">⏱ {saved.contact.name.split(" ")[0]}, you&apos;re eligible for <b>3–5 verified volunteer hours</b> once reviewed. We&apos;ll email <b>{saved.contact.email}</b>.</div>
           ) : (
@@ -286,6 +369,15 @@ export default function ContributorPanel({ school, onClose }: { school: School; 
       )}
     </aside>
   );
+}
+
+function summarize(s: Saved | null): string {
+  const nS = s?.sources?.length ?? 0;
+  const nF = s?.flags?.length ?? 0;
+  const parts: string[] = [];
+  if (nS) parts.push(`${nS} source${nS === 1 ? "" : "s"}`);
+  if (nF) parts.push(`${nF} correction${nF === 1 ? "" : "s"}`);
+  return parts.length ? parts.join(" and ") : "contribution";
 }
 
 function L({ k, children }: { k: string; children: React.ReactNode }) {

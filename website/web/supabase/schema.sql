@@ -10,13 +10,19 @@ create table if not exists public.contributions (
   school_lat    double precision,
   school_lon    double precision,
   has_wikipedia boolean default false,
-  info          jsonb,                 -- the contributed school facts
+  info          jsonb,                 -- snapshot of the facts we showed the contributor
+  source_links  jsonb,                 -- [{url, kind, note}] references we can cite
+  fact_flags    jsonb,                 -- [{field, label, current_value, corrected_value, source_url}]
   contact_name  text,
   contact_email text,                  -- stored lowercase for lookup
   contact_role  text,
   contact_org   text,
   created_at    timestamptz default now()
 );
+
+-- For tables created before these columns existed (create-if-not-exists won't add them):
+alter table public.contributions add column if not exists source_links jsonb;
+alter table public.contributions add column if not exists fact_flags   jsonb;
 
 create index if not exists contributions_email_idx on public.contributions (contact_email);
 create index if not exists contributions_nces_idx  on public.contributions (nces_id);

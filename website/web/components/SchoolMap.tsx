@@ -8,6 +8,7 @@ import { Map as BaseMap } from "react-map-gl/maplibre";
 import * as topojson from "topojson-client";
 import ContributorPanel from "./ContributorPanel";
 import MyContributions from "./MyContributions";
+import { supabase } from "../lib/supabase";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 const MAP_STYLE =
@@ -61,6 +62,7 @@ const NAME2ABBR: Record<string, string> = {
 type School = {
   i: string; n: string; s: string; c: string; ci: string;
   a?: string; z?: string; d?: string;
+  ph?: string; tf?: number | null; gl?: string; gh?: string; ch?: string; mg?: string;
   lv: string; e: number | null; w: 0 | 1; x: number; y: number;
 };
 type Agg = Record<string, [number, number]>; // key -> [total, has]
@@ -79,6 +81,7 @@ export default function SchoolMap() {
   const [searchFocused, setSearchFocused] = useState(false);
   const [expanded, setExpanded] = useState<School[] | null>(null);
   const [showAccount, setShowAccount] = useState(false);
+  const [contribCount, setContribCount] = useState<number | null>(null);
 
   const zoom: number = view.zoom;
   const showStates = zoom < STATE_MAX;
@@ -87,8 +90,21 @@ export default function SchoolMap() {
   // dot size grows as you zoom into a city/street (px)
   const ptRadius = Math.min(16, Math.max(3, (zoom - 6.5) * 3));
 
+  // total contributions so far (Supabase count, or this browser's drafts as a fallback)
+  function loadContribCount() {
+    if (supabase) {
+      supabase.from("contributions").select("*", { count: "exact", head: true }).then(({ count, error }) => {
+        if (!error && count != null) setContribCount(count);
+        else setContribCount(localContribCount());
+      });
+    } else {
+      setContribCount(localContribCount());
+    }
+  }
+
   // small aggregate files + basemap geometry on mount
   useEffect(() => {
+    loadContribCount();
     fetch("/data/state_coverage.json").then((r) => r.json()).then(setStateAgg);
     fetch("/data/county_coverage.json").then((r) => r.json()).then(setCountyAgg);
     fetch("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json")
@@ -262,7 +278,7 @@ export default function SchoolMap() {
       <header className="topbar">
         <div className="brand">
           SchoolData
-          <small>US K-12 schools (public + private) · the Wikipedia data desert</small>
+          <span className="tagline">Make every school visible.</span>
         </div>
 
         <div className="search">
@@ -312,28 +328,6 @@ export default function SchoolMap() {
           )}
         </div>
 
-        <div className="stats">
-          <div className="stat">
-            <div className="v">{national.total.toLocaleString()}</div>
-            <div className="k">schools (NCES)</div>
-          </div>
-          <div className="stat">
-            <div className="v red">{national.missing.toLocaleString()}</div>
-            <div className="k">no Wikipedia</div>
-          </div>
-          <div className="stat">
-            <div className="v green">{national.pct.toFixed(1)}%</div>
-            <div className="k">have an article</div>
-          </div>
-        </div>
-        <div className="hint">
-          {showPoints
-            ? "Showing individual schools — green = has article, red = missing"
-            : showCounties
-            ? "County Wikipedia coverage — zoom in for individual schools"
-            : "State Wikipedia coverage — click or zoom in for detail"}
-          {loadingPoints ? " · loading schools…" : ""}
-        </div>
         <button
           className="account-btn"
           onClick={() => { setSelected(null); setShowAccount(true); }}
@@ -341,6 +335,25 @@ export default function SchoolMap() {
           My contributions
         </button>
       </header>
+
+      <div className="stats">
+        <div className="stat">
+          <div className="v">{national.total.toLocaleString()}</div>
+          <div className="k">US K-12 schools</div>
+        </div>
+        <div className="stat">
+          <div className="v red">{national.missing.toLocaleString()}</div>
+          <div className="k">NOT on Wikipedia</div>
+        </div>
+        <div className="stat">
+          <div className="v green">{national.pct.toFixed(1)}%</div>
+          <div className="k">ON Wikipedia</div>
+        </div>
+        <div className="stat">
+          <div className="v blue">{contribCount == null ? "—" : contribCount.toLocaleString()}</div>
+          <div className="k">Contributions to SchoolData</div>
+        </div>
+      </div>
 
       <div className="legend">
         {showPoints ? (
@@ -372,7 +385,7 @@ export default function SchoolMap() {
       </div>
 
       {selected && (
-        <ContributorPanel school={selected} onClose={() => setSelected(null)} />
+        <ContributorPanel school={selected} onClose={() => { setSelected(null); loadContribCount(); }} />
       )}
       {showAccount && (
         <MyContributions
@@ -382,6 +395,15 @@ export default function SchoolMap() {
       )}
     </div>
   );
+}
+
+function localContribCount(): number {
+  let n = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith("contrib:")) n++;
+  }
+  return n;
 }
 
 function tip(html: string) {

@@ -17,8 +17,10 @@ to render the map.
 
 Output: web/public/data/schools.json
   [{ i: ncessch, n: name, s: state, c: county_fips, ci: city, a: address,
-     z: zip, d: district, lv: level, e: enrollment, w: 0|1 (has_wikipedia),
-     x: lon, y: lat }, ...]
+     z: zip, d: district, lv: level, e: enrollment, ph: phone,
+     tf: teachers_fte, gl: lowest_grade, gh: highest_grade, ch: charter Y/N,
+     mg: magnet Y/N, w: 0|1 (has_wikipedia), x: lon, y: lat }, ...]
+  (ph/tf/gl/gh/ch/mg are public-school only; NCES PSS omits them for private.)
 plus state_coverage.json and county_coverage.json aggregates.
 
 Usage:
@@ -82,6 +84,29 @@ def _enroll(v):
         return int(float(v))
     except (TypeError, ValueError):
         return None
+
+
+# NCES grade-offered codes (Urban API numeric form): -1 PK, 0 K, 1-12, 13.
+GRADE = {-1: "PK", 0: "K", 13: "13"}
+
+
+def _grade(v):
+    try:
+        n = int(v)
+    except (TypeError, ValueError):
+        return ""
+    if n in GRADE:
+        return GRADE[n]
+    return str(n) if 1 <= n <= 12 else ""
+
+
+def _yesno(v):
+    """NCES coded flag: 1=Yes, 2=No, negatives=missing/NA."""
+    try:
+        n = int(v)
+    except (TypeError, ValueError):
+        return ""
+    return "Yes" if n == 1 else ("No" if n == 2 else "")
 
 
 def load_private_master(path):
@@ -203,6 +228,12 @@ def nces_to_row(r):
         "d": r.get("lea_name") or "",
         "lv": LEVEL.get(str(r.get("school_level")), "other"),
         "e": r.get("enrollment") if isinstance(r.get("enrollment"), int) else None,
+        "ph": r.get("phone") or "",               # school phone
+        "tf": _enroll(r.get("teachers_fte")),     # teaching staff (FTE) -> ratio
+        "gl": _grade(r.get("lowest_grade_offered")),
+        "gh": _grade(r.get("highest_grade_offered")),
+        "ch": _yesno(r.get("charter")),
+        "mg": _yesno(r.get("magnet")),
         "w": 0,
         "x": round(lon, 5),
         "y": round(lat, 5),
