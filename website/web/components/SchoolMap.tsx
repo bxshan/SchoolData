@@ -84,6 +84,8 @@ export default function SchoolMap() {
   const showStates = zoom < STATE_MAX;
   const showCounties = zoom >= STATE_MAX && zoom < COUNTY_MAX;
   const showPoints = zoom >= COUNTY_MAX;
+  // dot size grows as you zoom into a city/street (px)
+  const ptRadius = Math.min(16, Math.max(3, (zoom - 6.5) * 3));
 
   // small aggregate files + basemap geometry on mount
   useEffect(() => {
@@ -204,11 +206,28 @@ export default function SchoolMap() {
         visible: showPoints,
         getPosition: (d) => [d.x, d.y],
         getFillColor: (d) => (d.w ? [34, 197, 94] : [239, 68, 68]),
-        getRadius: 2.4,
+        getRadius: ptRadius,
         radiusUnits: "pixels",
-        radiusMinPixels: 1.5, radiusMaxPixels: 7,
+        radiusMinPixels: 2,
         opacity: 0.9, pickable: true,
         onClick: (info) => setSelected((info.object as School) ?? null),
+        updateTriggers: { getRadius: ptRadius },
+      }),
+    // enlarged, ringed highlight for the currently selected school
+    selected &&
+      new ScatterplotLayer<School>({
+        id: "selected-school",
+        data: [selected],
+        getPosition: (d) => [d.x, d.y],
+        getFillColor: (d) => (d.w ? [34, 197, 94] : [239, 68, 68]),
+        getRadius: ptRadius + 5,
+        radiusUnits: "pixels",
+        stroked: true,
+        getLineColor: [255, 255, 255, 255],
+        lineWidthUnits: "pixels",
+        getLineWidth: 2.5,
+        pickable: false,
+        updateTriggers: { getPosition: selected.i, getRadius: ptRadius },
       }),
   ].filter(Boolean);
 
@@ -243,7 +262,7 @@ export default function SchoolMap() {
       <header className="topbar">
         <div className="brand">
           SchoolData
-          <small>US K-12 public schools · the Wikipedia data desert</small>
+          <small>US K-12 schools (public + private) · the Wikipedia data desert</small>
         </div>
 
         <div className="search">

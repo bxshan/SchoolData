@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase, usingSupabase } from "../lib/supabase";
 
 type School = {
   i: string; n: string; s: string; c: string; ci: string;
@@ -118,6 +118,7 @@ export default function ContributorPanel({ school, onClose }: { school: School; 
   const [saved, setSaved] = useState<Saved | null>(null);
   const [loading, setLoading] = useState(true);
   const [wikiTitle, setWikiTitle] = useState<string | null>(null);
+  const [cloudErr, setCloudErr] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -146,17 +147,25 @@ export default function ContributorPanel({ school, onClose }: { school: School; 
     localStorage.setItem("contrib:" + school.i, JSON.stringify(rec));
     // cloud (only if Supabase is configured)
     if (supabase) {
-      try {
-        await supabase.from("contributions").insert({
-          nces_id: school.i, school_name: school.n, school_state: school.s,
-          school_city: school.ci, school_lat: school.y, school_lon: school.x,
-          has_wikipedia: !!school.w, info,
-          contact_name: withContact?.name ?? null,
-          contact_email: withContact?.email?.trim().toLowerCase() ?? null,
-          contact_role: withContact?.role ?? null,
-          contact_org: withContact?.org ?? null,
-        });
-      } catch (e) { /* keep local copy even if the network write fails */ }
+      const { error } = await supabase.from("contributions").insert({
+        nces_id: school.i, school_name: school.n, school_state: school.s,
+        school_city: school.ci, school_lat: school.y, school_lon: school.x,
+        has_wikipedia: !!school.w, info,
+        contact_name: withContact?.name ?? null,
+        contact_email: withContact?.email?.trim().toLowerCase() ?? null,
+        contact_role: withContact?.role ?? null,
+        contact_org: withContact?.org ?? null,
+      });
+      if (error) {
+        console.error("Supabase insert failed:", error);
+        setCloudErr(error.message || "insert failed");
+      } else {
+        setCloudErr(null);
+        console.log("Saved to Supabase ✓");
+      }
+    } else {
+      console.warn("Supabase NOT configured (env vars missing) — saved to localStorage only");
+      setCloudErr("not-configured");
     }
     setSaved(rec); setStep("done");
   }
@@ -168,7 +177,10 @@ export default function ContributorPanel({ school, onClose }: { school: School; 
       <button className="close" onClick={onClose}>×</button>
       <div className="ed-status">
         <span className={`badge ${school.w ? "yes" : "no"}`}>{school.w ? "Has Wikipedia article" : "No article yet"}</span>
-        {step !== "done" && <span className="ed-pending">Step {step === "contribute" ? "1" : "2"} of 2</span>}
+        <span className="ed-pending" title="Where submissions are saved">
+          {usingSupabase ? "☁ Supabase" : "💾 Local only"}
+        </span>
+        {step !== "done" && <span className="ed-pending">· Step {step === "contribute" ? "1" : "2"} of 2</span>}
       </div>
       <h2>{school.n}</h2>
       <div className="ed-sub">
