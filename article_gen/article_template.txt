@@ -1,0 +1,46 @@
+Wikipedia-style stub template for a US K-12 school — deterministic fill from NCES.
+
+Output is plain encyclopedic prose (no wiki markup, no invented facts). Every
+[bracketed] part is optional: the article stays grammatical for ANY subset of the
+fields below — each clause appears only when its data exists, the lead is assembled
+from whatever descriptors are present, and a final whitespace pass removes any
+double spaces or dangling commas left by dropped parts. (Verified exhaustively over
+all field combinations.)
+
+----------------------------------------------------------------------------------
+{Name} is a {type} [{level} ]school[ in [{City}, ]{State}|{City}][, serving grades {GL}–{GH}].
+[It is part of {District}.]
+[As of the {Year} school year, the school [enrolled {Enrollment} students][ and ]
+[employed about {Teachers} full-time teachers[, a student–teacher ratio of roughly {Ratio}:1]].]
+----------------------------------------------------------------------------------
+
+Degradation rules (any field may be missing, in any combination):
+  - {Name} missing      -> "This school" is used as the subject.
+  - {type}              -> always present: "public" (12-digit NCES id) or "private".
+  - {level} missing     -> dropped:  "... is a public school ...".
+  - location            -> "in City, State" / "in State" / "in City" / nothing.
+  - {GL}/{GH}           -> grades clause shown only when BOTH are present.
+  - {District} missing  -> district sentence omitted (also omitted when the
+                           district name equals the school's, e.g. charter self-LEAs).
+  - size sentence       -> shown if enrollment AND/OR teachers exist; the ratio
+                           clause needs both; the whole sentence is dropped if neither.
+
+Field mapping (schools.json / NCES):
+  Name        = n
+  type        = "public" (+ "charter" if ch=="Yes", + "magnet" if mg=="Yes")
+  level       = lv -> "elementary " | "middle " | "high " | "" (combined/other)
+  City        = ci
+  State       = full state name expanded from the 2-letter code s
+  GL, GH      = gl, gh   (grade-offered codes: PK, K, 1..12)
+  District    = d  (rendered as "the <name> school district" unless it already
+                    names a district/ISD/unified system)
+  Enrollment  = e
+  Teachers    = tf (full-time-equivalent)
+  Ratio       = round(e / tf, 1)
+  Year        = data vintage (CCD pull year), a CLI argument
+
+Rules:
+  - Never invent a value; omit any clause whose token is empty.
+  - Deterministic: identical input -> identical output (no randomness, no model).
+  - Private (PSS) schools lack ph/tf/gl/gh/ch/mg; the size clause degrades to
+    enrollment only, and "public" is dropped for non-public sectors.
