@@ -1,3 +1,4 @@
+# Author: Boxuan Shan + support from Claude Opus 4.8
 #!/usr/bin/env python3
 """Crawl Wikipedia for all US K-12 school articles (public + private) and save
 their titles and links.
@@ -634,11 +635,20 @@ def parse_write_status(s):
     return {tok.strip() for tok in s.split(",") if tok.strip()}
 
 
+# Outputs land in output/ (a sibling of the scripts). A bare --out/--checkpoint
+# name is placed here; pass a path with a separator to write elsewhere.
+OUT_DIR = os.path.join(os.path.dirname(__file__), "output")
+
+
+def _out(name):
+    return name if os.path.dirname(name) else os.path.join(OUT_DIR, name)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Crawl Wikipedia for US K-12 school articles."
     )
-    parser.add_argument("--out", default="k12_schools.csv", help="output CSV path")
+    parser.add_argument("--out", default="schools.csv", help="output CSV path")
     parser.add_argument(
         "--max-depth", type=int, default=6,
         help="max category recursion depth (default 6)",
@@ -673,6 +683,11 @@ def main():
                         help="comma list of validation tags to write "
                              "(default: all). e.g. school,unverified")
     args = parser.parse_args()
+
+    os.makedirs(OUT_DIR, exist_ok=True)
+    args.out = _out(args.out)
+    if args.checkpoint:
+        args.checkpoint = _out(args.checkpoint)
 
     seeds = list(SEED_CATEGORIES)
     if args.include_defunct:

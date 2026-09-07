@@ -6,7 +6,7 @@ Urban API / PSS does not expose private-school lat/lon. We resolve them with the
 free U.S. Census Bureau batch geocoder (no key), which also returns the county
 FIPS used by the county choropleth.
 
-Reads:  ../../nces_crawl/all_schools_output/all_schools_master.csv  (sector=private)
+Reads:  ../../data/nces_crawl/output_all_schools/all_schools_master.csv  (sector=private)
 Writes: ../data/private_geocoded.csv
         columns: school_id, lat, lon, county_fips, match
 
@@ -27,7 +27,7 @@ import time
 import requests
 
 HERE = os.path.dirname(__file__)
-MASTER = os.path.join(HERE, "..", "..", "nces_crawl", "all_schools_output",
+MASTER = os.path.join(HERE, "..", "..", "data", "nces_crawl", "output_all_schools",
                       "all_schools_master.csv")
 OUT = os.path.join(HERE, "..", "data", "private_geocoded.csv")
 GEOCODER = "https://geocoding.geo.census.gov/geocoder/geographies/addressbatch"

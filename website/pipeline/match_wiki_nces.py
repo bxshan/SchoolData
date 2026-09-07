@@ -175,7 +175,7 @@ def emit(w, rec, method, score):
 def main():
     ap = argparse.ArgumentParser(description="Match cleaned Wikipedia schools to NCES master.")
     ap.add_argument("--wiki", default="schools_new_enriched.csv")
-    ap.add_argument("--nces", default="../nces_crawl/all_schools_output/all_schools_master.csv")
+    ap.add_argument("--nces", default="../../data/nces_crawl/output_all_schools/all_schools_master.csv")
     ap.add_argument("--out", default="wiki_nces_matches.csv")
     ap.add_argument("--threshold", type=float, default=88.0,
                     help="min fuzzy score (0-100) to accept a name match (default 88)")

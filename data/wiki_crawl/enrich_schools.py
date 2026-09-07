@@ -1,3 +1,4 @@
+# Author: Boxuan Shan + support from Claude Opus 4.8
 #!/usr/bin/env python3
 """Clean + enrich the raw K-12 school crawl into a usable dataset.
 
@@ -22,6 +23,7 @@ Usage:
 
 import argparse
 import csv
+import os
 import re
 import sys
 import time
@@ -309,6 +311,15 @@ def enrich_wikidata(session, records, delay):
             rec["postal_code"] = ex["postal_code"] if isinstance(ex["postal_code"], str) else ""
 
 
+# Intermediates live in output/ (a sibling of the scripts). Bare --in/--out names
+# resolve here; pass a path with a separator to read/write elsewhere.
+OUT_DIR = os.path.join(os.path.dirname(__file__), "output")
+
+
+def _out(name):
+    return name if os.path.dirname(name) else os.path.join(OUT_DIR, name)
+
+
 def main():
     ap = argparse.ArgumentParser(description="Clean + enrich K-12 school crawl.")
     ap.add_argument("--in", dest="inp", default="schools.csv")
@@ -320,6 +331,10 @@ def main():
     ap.add_argument("--no-wikidata", action="store_true",
                     help="skip the Wikidata pass (type/founded/website/district/NCES/postal)")
     args = ap.parse_args()
+
+    os.makedirs(OUT_DIR, exist_ok=True)
+    args.inp = _out(args.inp)
+    args.out = _out(args.out)
 
     rows = list(csv.DictReader(open(args.inp, encoding="utf-8")))
     sys.stderr.write(f"loaded {len(rows)} rows from {args.inp}\n")

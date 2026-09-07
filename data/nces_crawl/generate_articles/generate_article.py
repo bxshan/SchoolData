@@ -1,8 +1,9 @@
+# Author: Boxuan Shan + support from Claude Opus 4.8
 #!/usr/bin/env python3
 """Deterministically render a Wikipedia-style plaintext article for a US K-12
 school using ALL available NCES metadata.
 
-Reads the full 85-column NCES master (nces_crawl/all_schools_output/
+Reads the full 85-column NCES master (../output_all_schools/
 all_schools_master.csv) — not the trimmed schools.json — so it can use every
 descriptive field: location + county, locale, school type, grade range, district,
 enrollment, staffing and ratio, Title I (free/reduced lunch) for public schools,
@@ -26,7 +27,7 @@ import os
 import re
 
 HERE = os.path.dirname(__file__)
-MASTER = os.path.join(HERE, "..", "nces_crawl", "all_schools_output",
+MASTER = os.path.join(HERE, "..", "output_all_schools",
                       "all_schools_master.csv")
 
 STATE_NAMES = {

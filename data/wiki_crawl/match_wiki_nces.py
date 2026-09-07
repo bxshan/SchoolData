@@ -1,3 +1,4 @@
+# Author: Boxuan Shan + support from Claude Opus 4.8
 #!/usr/bin/env python3
 """Match the cleaned Wikipedia school set against the NCES master and write a CSV
 of all matches.
@@ -24,6 +25,7 @@ Usage:
 
 import argparse
 import csv
+import os
 import re
 import sys
 from collections import defaultdict
@@ -172,14 +174,27 @@ def emit(w, rec, method, score):
     }
 
 
+# Wiki intermediates and the match output live in output/ (a sibling of the
+# scripts). Bare --wiki/--out names resolve here; --nces keeps its own path.
+OUT_DIR = os.path.join(os.path.dirname(__file__), "output")
+
+
+def _out(name):
+    return name if os.path.dirname(name) else os.path.join(OUT_DIR, name)
+
+
 def main():
     ap = argparse.ArgumentParser(description="Match cleaned Wikipedia schools to NCES master.")
-    ap.add_argument("--wiki", default="schools_new_enriched.csv")
-    ap.add_argument("--nces", default="../nces_crawl/all_schools_output/all_schools_master.csv")
+    ap.add_argument("--wiki", default="schools_enriched.csv")
+    ap.add_argument("--nces", default="../nces_crawl/output_all_schools/all_schools_master.csv")
     ap.add_argument("--out", default="wiki_nces_matches.csv")
     ap.add_argument("--threshold", type=float, default=88.0,
                     help="min fuzzy score (0-100) to accept a name match (default 88)")
     args = ap.parse_args()
+
+    os.makedirs(OUT_DIR, exist_ok=True)
+    args.wiki = _out(args.wiki)
+    args.out = _out(args.out)
 
     sys.stderr.write(f"fuzzy backend: {_BACKEND}\n")
     by_id, by_state = load_nces(args.nces)

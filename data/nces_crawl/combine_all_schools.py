@@ -1,4 +1,4 @@
-# Author: Boxuan Shan + support from Claude Sonnet 4.5
+# Author: Boxuan Shan + support from Claude Opus 4.8
 #!/usr/bin/env python3
 """
 Combine downloaded NCES public AND private school files into a single
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 # Where the per-state .xls files live and where to write the unified output.
 PUBLIC_DOWNLOAD_DIR = Path("public_school_downloads")
 PRIVATE_DOWNLOAD_DIR = Path("private_school_downloads")
-OUTPUT_DIR = Path("all_schools_output")
+OUTPUT_DIR = Path("output_all_schools")
 OUTPUT_FILE = "all_schools_master.csv"
 
 # Normalized common-core columns, in output order.

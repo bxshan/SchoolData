@@ -1,3 +1,4 @@
+# Author: Boxuan Shan + support from Claude Opus 4.8
 #!/usr/bin/env python3
 """Run the deterministic article generator over N schools from the NCES master.
 
@@ -5,30 +6,44 @@
   --n -1  render ALL schools in the master
 
 Small runs print to stdout; large runs (or --out) write JSONL, one record per
-line: {school_id, school_name, sector, state, article}.
+line: {school_id, school_name, sector, state, article}. Files land in the fixed
+output_generated_articles/ dir (a sibling of output_all_schools/) unless --out has a path.
 
 Usage:
-    python run_samples.py --n 10
+    python run_samples.py --n 10                          # -> stdout
     python run_samples.py --n 10 --sector private --seed 3
-    python run_samples.py --n 25 --out sample.jsonl
-    python run_samples.py --n -1 --out all_articles.jsonl
+    python run_samples.py --n 25 --out sample.jsonl       # -> output_generated_articles/sample.jsonl
+    python run_samples.py --n -1 --out all_articles.jsonl # -> output_generated_articles/all_articles.jsonl
 """
 
 import argparse
 import json
+import os
 import random
 import sys
 import time
 
 import generate_article as ga
 
+# Generated articles land in a fixed output dir, a sibling of output_all_schools/
+# (../output_generated_articles relative to this script). A bare --out filename is placed
+# here too; pass a path with a separator to write elsewhere.
+HERE = os.path.dirname(__file__)
+OUT_DIR = os.path.join(HERE, "..", "output_generated_articles")
+
+
+def resolve_out(name):
+    """Put a bare filename in OUT_DIR; respect any path the user gives."""
+    return name if os.path.dirname(name) else os.path.join(OUT_DIR, name)
+
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, required=True,
                     help="number of schools to render; -1 = all")
-    ap.add_argument("--out", help="write JSONL here (default: stdout, or "
-                                  "articles.jsonl for large runs)")
+    ap.add_argument("--out", help="JSONL filename (bare name -> output_generated_articles/; "
+                                  "default: stdout for small runs, "
+                                  "output_generated_articles/articles.jsonl for large ones)")
     ap.add_argument("--sector", choices=["public", "private", "all"], default="all")
     ap.add_argument("--year", default="2021-22")
     ap.add_argument("--seed", type=int, default=0, help="RNG seed for sampling")
@@ -51,8 +66,11 @@ def main():
         picks = random.sample(rows, n)
     sys.stderr.write(f"master: {total:,} {args.sector} schools | rendering {len(picks):,}\n")
 
-    # stdout for small ad-hoc runs; a file for anything sizable
+    # stdout for small ad-hoc runs; a file in output_generated_articles/ for anything sizable
     out_path = args.out or ("articles.jsonl" if len(picks) > 50 else None)
+    if out_path:
+        out_path = resolve_out(out_path)
+        os.makedirs(os.path.dirname(out_path), exist_ok=True)
     t0 = time.time()
 
     if out_path:

@@ -290,8 +290,8 @@ def main():
     ap.add_argument("--add-private", action="store_true",
                     help="merge geocoded NCES private schools into the existing "
                          "schools.json (needs private_geocoded.csv)")
-    ap.add_argument("--master", default=os.path.join(HERE, "..", "..", "nces_crawl",
-                    "all_schools_output", "all_schools_master.csv"))
+    ap.add_argument("--master", default=os.path.join(HERE, "..", "..", "data", "nces_crawl",
+                    "output_all_schools", "all_schools_master.csv"))
     ap.add_argument("--geocode", default=os.path.join(HERE, "..", "data", "private_geocoded.csv"))
     ap.add_argument("--enriched", default=os.path.join(HERE, "..", "data", "schools_enriched.csv"))
     args = ap.parse_args()

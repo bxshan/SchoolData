@@ -1,3 +1,4 @@
+# Author: Boxuan Shan + support from Claude Opus 4.8
 #!/usr/bin/env python3
 """
 NCES School Scraper (State-by-State)
@@ -57,14 +58,14 @@ SCHOOL_TYPES = {
     'public': {
         'base_url': 'https://nces.ed.gov/ccd/schoolsearch/school_list.asp',
         'download_dir': 'public_school_downloads',
-        'output_dir': 'public_school_output',
+        'output_dir': 'output_public_schools',
         'output_file': 'public_schools_master.csv',
         'display_name': 'PUBLIC SCHOOL'
     },
     'private': {
         'base_url': 'https://nces.ed.gov/surveys/pss/privateschoolsearch/school_list.asp',
         'download_dir': 'private_school_downloads',
-        'output_dir': 'private_school_output',
+        'output_dir': 'output_private_schools',
         'output_file': 'private_schools_master.csv',
         'display_name': 'PRIVATE SCHOOL'
     }
