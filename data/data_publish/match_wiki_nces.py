@@ -174,9 +174,13 @@ def emit(w, rec, method, score):
     }
 
 
-# Wiki intermediates and the match output live in output/ (a sibling of the
-# scripts). Bare --wiki/--out names resolve here; --nces keeps its own path.
-OUT_DIR = os.path.join(os.path.dirname(__file__), "output")
+# The match output lives in output/ (a sibling of this script). A bare --out name
+# resolves here; --wiki/--nces default to the canonical pipeline artifacts,
+# resolved relative to this script (data/data_publish/ -> ../{wiki,nces}_crawl/...).
+HERE = os.path.dirname(__file__)
+OUT_DIR = os.path.join(HERE, "output")
+DEFAULT_WIKI = os.path.join(HERE, "..", "wiki_crawl", "output", "schools_enriched.csv")
+DEFAULT_NCES = os.path.join(HERE, "..", "nces_crawl", "output_all_schools", "all_schools_master.csv")
 
 
 def _out(name):
@@ -185,8 +189,8 @@ def _out(name):
 
 def main():
     ap = argparse.ArgumentParser(description="Match cleaned Wikipedia schools to NCES master.")
-    ap.add_argument("--wiki", default="schools_enriched.csv")
-    ap.add_argument("--nces", default="../nces_crawl/output_all_schools/all_schools_master.csv")
+    ap.add_argument("--wiki", default=DEFAULT_WIKI)
+    ap.add_argument("--nces", default=DEFAULT_NCES)
     ap.add_argument("--out", default="wiki_nces_matches.csv")
     ap.add_argument("--threshold", type=float, default=88.0,
                     help="min fuzzy score (0-100) to accept a name match (default 88)")

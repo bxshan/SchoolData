@@ -10,9 +10,12 @@ against the NCES master to measure Wikipedia coverage.
 
 - `crawl_k12_schools.py` — walk the Wikipedia category tree → tagged `schools.csv`
 - `enrich_schools.py` — clean + add state/level/Wikidata QID/coordinates
-- `match_wiki_nces.py` — match the clean wiki set to NCES (id + name/state + fuzzy)
 - `output/` — all generated CSVs (git-ignored)
 - `tests/` — pytest suite for the crawler
+
+> Matching the clean wiki set against the NCES master moved to
+> `../data_publish/match_wiki_nces.py` (the publish step); it reads this
+> directory's `output/schools_enriched.csv` by default.
 
 ## Usage
 
@@ -26,14 +29,14 @@ python crawl_k12_schools.py --out schools_clean.csv --write-status school
 # 2. Enrich → adds state, level, Wikidata QID, lat/lon.
 python enrich_schools.py
 
-# 3. Match against the NCES master.
-python match_wiki_nces.py
+# 3. Match against NCES → ../data_publish/ (writes there, not here).
+python ../data_publish/match_wiki_nces.py
 ```
 
-Every script reads and writes in `output/` by default (a bare `--in`/`--out`/
-`--wiki` name resolves there; pass a path with a separator to use another
-location). The three stages chain with no flags: `output/schools.csv` →
-`output/schools_enriched.csv` → `output/wiki_nces_matches.csv`.
+Crawl/enrich read and write in this `output/` by default (a bare `--in`/`--out`
+name resolves there; pass a path with a separator to use another location):
+`output/schools.csv` → `output/schools_enriched.csv`. The match step then reads
+`output/schools_enriched.csv` and writes `data_publish/output/wiki_nces_matches.csv`.
 
 Only dependency beyond the standard library is `requests` (`pip install requests`).
 All scripts accept `--proxy http://127.0.0.1:7890` for a local proxy.
@@ -44,7 +47,9 @@ All scripts accept `--proxy http://127.0.0.1:7890` for a local proxy.
 |---|---|---|
 | `schools.csv` | `crawl_k12_schools.py` | ~23k rows, each tagged in `validation` |
 | `schools_enriched.csv` | `enrich_schools.py` | resolved + state/level/QID/coords |
-| `wiki_nces_matches.csv` | `match_wiki_nces.py` | wiki→NCES matches with confidence score |
+
+(`wiki_nces_matches.csv` is produced by `../data_publish/match_wiki_nces.py`
+into `data_publish/output/`.)
 
 The `validation` column tags every crawled row — `school`, `unverified`,
 `defunct`, `out_of_scope`, or `non_school`. Nothing is dropped at crawl time;

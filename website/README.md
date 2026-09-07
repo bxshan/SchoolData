@@ -17,13 +17,11 @@ database to draw the map.
 
 ```
 schooldata/
+│  # Wikipedia crawl → enrich → match now live in ../data/wiki_crawl/
+│  # (produces wiki_nces_matches.csv); this pipeline/ holds only the
+│  # website-specific steps:
 ├── pipeline/                 # Python — runs locally / on your workstation
-│   ├── crawl_k12_schools.py  #  crawl Wikipedia category tree -> schools.csv
-│   │                         #  (two-phase: discover + Wikidata `validation` tag)
-│   ├── enrich_schools.py     #  add state/level/Wikidata/NCES-id/coords/pageviews
-│   ├── match_wiki_nces.py    #  match clean wiki set -> NCES (id + name + fuzzy)
 │   ├── geocode_private.py    #  Census batch-geocode NCES private schools -> coords
-│   ├── diag.py               #  category-tree diagnostics
 │   └── build_dataset.py      #  pull NCES public (102k, lat/lon) + flag has_wikipedia
 │                             #  from wiki_nces_matches.csv; --add-private merges the
 │                             #  geocoded private schools -> web/public/data/schools.json
