@@ -158,7 +158,8 @@ def test_one_article_per_nces_school(tmp_path, monkeypatch, capsys):
                     "state": "Alabama", "nces_id": "", "validation": "non_school"})
     out = tmp_path / "out.csv"
     monkeypatch.setattr(sys, "argv", ["m", "--wiki", str(wiki_csv), "--nces", str(master),
-                                      "--out", str(out)])
+                                      "--out", str(out), "--nces-coords", "",
+                                      "--unmatched", str(tmp_path / "unmatched.csv")])
     m.main()
     rows = list(csv.DictReader(open(out)))
     assert len(rows) == 1                               # one article per school
