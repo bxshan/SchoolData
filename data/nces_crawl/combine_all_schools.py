@@ -25,10 +25,12 @@ from pathlib import Path
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Where the per-state .xls files live and where to write the unified output.
-PUBLIC_DOWNLOAD_DIR = Path("public_school_downloads")
-PRIVATE_DOWNLOAD_DIR = Path("private_school_downloads")
-OUTPUT_DIR = Path("output_all_schools")
+# Where the per-state .xls files live and where to write the unified output —
+# resolved next to this script, so it runs from any working directory.
+HERE = Path(__file__).resolve().parent
+PUBLIC_DOWNLOAD_DIR = HERE / "public_school_downloads"
+PRIVATE_DOWNLOAD_DIR = HERE / "private_school_downloads"
+OUTPUT_DIR = HERE / "output_all_schools"
 OUTPUT_FILE = "all_schools_master.csv"
 
 # Normalized common-core columns, in output order.

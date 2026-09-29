@@ -45,7 +45,9 @@ def main():
                                   "default: stdout for small runs, "
                                   "output_generated_articles/articles.jsonl for large ones)")
     ap.add_argument("--sector", choices=["public", "private", "all"], default="all")
-    ap.add_argument("--year", default="2021-22")
+    ap.add_argument("--year", default=None,
+                    help="school-year vintage for every article "
+                         "(default: per sector, see generate_article.DATA_YEAR)")
     ap.add_argument("--seed", type=int, default=0, help="RNG seed for sampling")
     ap.add_argument("--master", default=ga.MASTER)
     args = ap.parse_args()

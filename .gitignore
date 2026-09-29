@@ -28,9 +28,16 @@ events.out.tfevents.*
 # Logs
 *.log
 
-# wiki_crawl regenerable intermediates (canonical copies live in website/data/)
-data/wiki_crawl/schools_new*
-data/data_publish/output/wiki_nces_matches.csv
+# Regenerable pipeline outputs (canonical copies of the wiki/match CSVs live in
+# website/data/; the HF dataset is published to Hugging Face, not git)
+data/nces_crawl/public_school_downloads/
+data/nces_crawl/private_school_downloads/
+data/nces_crawl/output_generated_articles/
+data/wiki_crawl/output/
+data/data_publish/output/
 
 # Local scratch runner (hardcoded absolute paths)
 data/wiki_crawl/run.sh
+
+# wiki_crawl regenerable intermediates
+data/wiki_crawl/schools_new*

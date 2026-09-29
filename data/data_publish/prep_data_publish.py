@@ -2,8 +2,8 @@
 #!/usr/bin/env python3
 """Build the final `articles` dataset for publishing to Hugging Face.
 
-Combines two pipeline artifacts into one row per school, following the `articles`
-schema in `Publish OSS Dataset.md` (§1):
+Combines two pipeline artifacts into one row per school (the `articles` schema
+below):
 
   inputs
     1. Generated articles JSONL  (data/nces_crawl/output_generated_articles/*.jsonl)
@@ -25,9 +25,9 @@ text of from_wikipedia=1 rows with the real Wikipedia extract).
 Writes `output/articles.parquet` (for HF) + `output/articles.jsonl` (human-read).
 
 Usage:
-    python data_publish.py
-    python data_publish.py --articles /path/to/articles.jsonl --matches /path/out.csv
-    python data_publish.py --out articles           # -> output/articles.{parquet,jsonl}
+    python prep_data_publish.py
+    python prep_data_publish.py --articles /path/to/articles.jsonl --matches /path/out.csv
+    python prep_data_publish.py --out articles      # -> output/articles.{parquet,jsonl}
 """
 
 import argparse
@@ -43,7 +43,7 @@ DEFAULT_ARTICLES = os.path.join(HERE, "..", "nces_crawl",
                                 "output_generated_articles")
 DEFAULT_MATCHES = os.path.join(OUT_DIR, "wiki_nces_matches.csv")
 
-# Output column order — matches the `articles` schema in Publish OSS Dataset.md §1.
+# Output column order — the `articles` schema described in the module docstring.
 FIELDS = ["nces_id", "name", "state", "sector", "text", "from_wikipedia",
           "wikipedia_title", "wikidata_qid", "wikipedia_revid"]
 
@@ -55,8 +55,8 @@ def load_generated(path):
              else sorted(glob.glob(os.path.join(path, "*.jsonl"))))
     if not files:
         sys.exit(f"no generated-article JSONL found at {path}\n"
-                 f"  run: cd ../data/nces_crawl/generate_articles && "
-                 f"python run_samples.py --n -1")
+                 f"  run: cd ../nces_crawl/generate_articles && "
+                 f"python run_samples.py --n -1 --out articles.jsonl")
     out, dups = {}, 0
     for fp in files:
         with open(fp, encoding="utf-8") as fh:

@@ -9,10 +9,24 @@ Matching is tiered; the first tier that hits wins for each Wikipedia school:
   2. name_state - exact normalized name + state. When several NCES schools share
                   the name in that state, the one whose city appears in the
                   Wikipedia title is preferred (else the first; counted ambiguous).
-  3. fuzzy      - best normalized-name similarity within the same state, using
-                  rapidfuzz token_set_ratio (falls back to stdlib difflib). A
-                  shared city in the Wikipedia title boosts the score. Accepted
-                  when the score >= --threshold.
+  3. fuzzy      - best similarity of the distinctive name core (generic words
+                  like "high school"/"academy" removed) within the same state,
+                  using rapidfuzz token_sort_ratio (falls back to stdlib
+                  difflib). A shared city in the Wikipedia title boosts the
+                  score. Accepted at >= 96, or >= --threshold with a city match.
+                  Candidates are skipped when the title's "(City, State)" names
+                  a different city, or when both names carry grade-level words
+                  that don't overlap (high vs elementary), since the core
+                  comparison ignores both.
+
+Only Wikipedia rows whose crawl `validation` tag is in --statuses (default:
+`school`) are matched, so events, people, districts and defunct schools tagged by
+crawl_k12_schools.py never reach the NCES join.
+
+Each NCES school is claimed by at most one Wikipedia article: when several
+articles land on the same school, the strongest match wins (nces_id > name_state
+> fuzzy, then higher score, then more pageviews) and the rest are counted as
+`nces_conflict` and left unmatched.
 
 This recovers private-school matches that the ID join misses (NCES private
 schools have no Wikidata NCES-ID), at the cost of some fuzziness — hence the
@@ -21,6 +35,7 @@ score column so low-confidence rows can be reviewed or filtered.
 Usage:
     python match_wiki_nces.py            # defaults below -> wiki_nces_matches.csv
     python match_wiki_nces.py --threshold 90 --out matches.csv
+    python match_wiki_nces.py --statuses school,unverified
 """
 
 import argparse
@@ -38,7 +53,7 @@ except Exception:                       # pragma: no cover - portability fallbac
 
     class fuzz:  # noqa: N801 - mimic rapidfuzz API surface we use
         @staticmethod
-        def token_set_ratio(a, b):
+        def token_sort_ratio(a, b):
             ta, tb = " ".join(sorted(a.split())), " ".join(sorted(b.split()))
             return difflib.SequenceMatcher(None, ta, tb).ratio() * 100
     _BACKEND = "difflib"
@@ -62,6 +77,7 @@ STATE_ABBR = {
     "district of columbia": "DC", "puerto rico": "PR", "guam": "GU",
     "american samoa": "AS", "northern mariana islands": "MP",
     "virgin islands": "VI", "u.s. virgin islands": "VI",
+    "united states virgin islands": "VI",
 }
 
 _ABBREV = [
@@ -115,6 +131,38 @@ def title_city(title):
     return m.group(1).split(",")[0].strip().lower()
 
 
+# Bare title disambiguators that name no place.
+_NON_PLACE = {"school", "high school", "academy", "private school", "public school"}
+
+
+def title_explicit_city(title):
+    """City named in a title parenthetical: '(City, State)' or a bare '(City)'.
+    '' for a bare state ('(Georgia)') or a non-place disambiguator."""
+    m = re.search(r"\(([^)]*)\)", title)
+    if not m:
+        return ""
+    inner = m.group(1).strip().lower()
+    if "," in inner:
+        return inner.split(",")[0].strip()
+    if inner in STATE_ABBR or inner in _NON_PLACE or re.search(r"\d", inner):
+        return ""
+    return inner
+
+
+# Grade-level words in a normalized name -> level bucket. "Middle/High" yields
+# {middle, high}; names with no level word ("Pine Crest School") yield {}.
+LEVEL_WORDS = {
+    "high": "high", "senior": "high", "secondary": "high", "hs": "high",
+    "middle": "middle", "junior": "middle", "intermediate": "middle", "ms": "middle",
+    "elementary": "elementary", "primary": "elementary", "elem": "elementary",
+    "es": "elementary",
+}
+
+
+def school_levels(norm):
+    return {LEVEL_WORDS[t] for t in norm.split() if t in LEVEL_WORDS}
+
+
 def significant_tokens(norm):
     return {t for t in norm.split() if len(t) >= 4}
 
@@ -137,6 +185,7 @@ def load_nces(path):
                 "norm": norm_name(r["school_name"]),
             }
             rec["core"] = core_name(rec["norm"])
+            rec["levels"] = school_levels(rec["norm"])
             rec["tokens"] = significant_tokens(rec["core"])
             if sid:
                 by_id[sid] = rec
@@ -187,6 +236,82 @@ def _out(name):
     return name if os.path.dirname(name) else os.path.join(OUT_DIR, name)
 
 
+# Stronger tiers win when several Wikipedia articles land on one NCES school.
+METHOD_RANK = {"nces_id": 0, "name_state": 1, "fuzzy": 2}
+
+
+def parse_statuses(s):
+    """'school,unverified' -> {'school', 'unverified'}; '' or 'all' -> None (no filter)."""
+    toks = {t.strip() for t in (s or "").split(",") if t.strip()}
+    return None if not toks or "all" in toks else toks
+
+
+def match_one(w, by_id, by_state, token_idx, threshold, stats):
+    """Best (nces_record, method, score) for one Wikipedia row, or None."""
+    nid = (w.get("nces_id") or "").strip()
+    # tier 1: exact NCES id
+    if nid and nid in by_id:
+        return by_id[nid], "nces_id", 100.0
+
+    code = state_code(w["state"])
+    wnorm = norm_name(w["title"])
+    wcity = title_city(w["title"])
+    cands = by_state.get(code, []) if code else []
+
+    # tier 2: exact normalized name + state (city-disambiguated)
+    exact = [r for r in cands if r["norm"] == wnorm and wnorm]
+    if exact:
+        best = next((r for r in exact if wcity and r["city"] == wcity), exact[0])
+        if len(exact) > 1:
+            stats["name_state_ambiguous"] += 1
+        return best, "name_state", 100.0
+
+    # tier 3: fuzzy on the DISTINCTIVE name core within the same state.
+    wcore = core_name(wnorm)
+    if not cands or len(wcore.replace(" ", "")) < 4:   # skip too-generic cores
+        return None
+    seen, pool = set(), []
+    for tok in significant_tokens(wcore):
+        for r in token_idx[code].get(tok, ()):
+            if r["school_id"] not in seen:
+                seen.add(r["school_id"]); pool.append(r)
+    best_r, best_s = None, -1.0
+    wexplicit = title_explicit_city(w["title"])
+    wlevels = school_levels(wnorm)
+    for r in pool:
+        if not r["core"]:
+            continue
+        # The core drops level words and ignores place, so reject candidates
+        # that contradict the title: a different city named in "(City, State)",
+        # or disjoint grade levels ("Troy High School" vs "Troy Elementary").
+        if wexplicit and r["city"] != wexplicit:
+            continue
+        if wlevels and r["levels"] and not (wlevels & r["levels"]):
+            continue
+        # token_sort_ratio on cores: distinctive name, order-insensitive,
+        # NOT inflated by shared generic suffix.
+        s = fuzz.token_sort_ratio(wcore, r["core"])
+        if wcity and r["city"] == wcity:
+            s = min(100.0, s + 6.0)         # confirming-city boost
+        if s > best_s:
+            best_s, best_r = s, r
+    if best_r is None:
+        return None
+    # Accept on strong core similarity, OR good similarity confirmed by a
+    # matching city in the Wikipedia title.
+    city_ok = bool(wcity) and best_r["city"] == wcity
+    if best_s >= max(threshold, 96.0) or (best_s >= threshold and city_ok):
+        return best_r, "fuzzy", best_s
+    return None
+
+
+def _pageviews(w):
+    try:
+        return int(float(w.get("pageviews_60d") or 0))
+    except ValueError:
+        return 0
+
+
 def main():
     ap = argparse.ArgumentParser(description="Match cleaned Wikipedia schools to NCES master.")
     ap.add_argument("--wiki", default=DEFAULT_WIKI)
@@ -194,11 +319,15 @@ def main():
     ap.add_argument("--out", default="wiki_nces_matches.csv")
     ap.add_argument("--threshold", type=float, default=88.0,
                     help="min fuzzy score (0-100) to accept a name match (default 88)")
+    ap.add_argument("--statuses", default="school",
+                    help="comma list of crawl `validation` tags to match "
+                         "(default: school; 'all' disables the filter)")
     args = ap.parse_args()
 
     os.makedirs(OUT_DIR, exist_ok=True)
     args.wiki = _out(args.wiki)
     args.out = _out(args.out)
+    statuses = parse_statuses(args.statuses)
 
     sys.stderr.write(f"fuzzy backend: {_BACKEND}\n")
     by_id, by_state = load_nces(args.nces)
@@ -206,65 +335,41 @@ def main():
     n_nces = sum(len(v) for v in by_state.values())
     sys.stderr.write(f"loaded NCES: {n_nces:,} schools in {len(by_state)} states\n")
 
-    wiki = list(csv.DictReader(open(args.wiki, newline="", encoding="utf-8", errors="replace")))
-    sys.stderr.write(f"loaded Wikipedia clean set: {len(wiki):,} schools\n")
+    with open(args.wiki, newline="", encoding="utf-8", errors="replace") as fh:
+        reader = csv.DictReader(fh)
+        has_validation = "validation" in (reader.fieldnames or [])
+        wiki_all = list(reader)
+    if statuses is None:
+        wiki = wiki_all
+    elif has_validation:
+        wiki = [w for w in wiki_all if w["validation"] in statuses]
+    else:
+        sys.exit(f"{args.wiki} has no `validation` column, so --statuses "
+                 f"{args.statuses!r} cannot be applied.\n"
+                 f"  re-run wiki_crawl/enrich_schools.py on the tagged crawl, "
+                 f"or pass --statuses all to match every row unfiltered.")
+    sys.stderr.write(f"loaded Wikipedia: {len(wiki_all):,} rows, "
+                     f"{len(wiki):,} kept by --statuses {args.statuses}\n")
 
-    matches = []
     stats = defaultdict(int)
-    used_nces = set()
-
+    # nces school_id -> (rank key, wiki row, nces record, method, score)
+    claims = {}
     for w in wiki:
-        nid = w["nces_id"].strip()
-        # tier 1: exact NCES id
-        if nid and nid in by_id:
-            matches.append(emit(w, by_id[nid], "nces_id", 100.0))
-            used_nces.add(by_id[nid]["school_id"]); stats["nces_id"] += 1
+        hit = match_one(w, by_id, by_state, token_idx, args.threshold, stats)
+        if hit is None:
+            stats["unmatched"] += 1
             continue
+        rec, method, score = hit
+        key = (METHOD_RANK[method], -score, -_pageviews(w))
+        prev = claims.get(rec["school_id"])
+        if prev is None or key < prev[0]:
+            claims[rec["school_id"]] = (key, w, rec, method, score)
+        stats["nces_conflict"] += prev is not None   # one of the two loses
 
-        code = state_code(w["state"])
-        wnorm = norm_name(w["title"])
-        wcity = title_city(w["title"])
-        cands = by_state.get(code, []) if code else []
-
-        # tier 2: exact normalized name + state (city-disambiguated)
-        exact = [r for r in cands if r["norm"] == wnorm and wnorm]
-        if exact:
-            best = next((r for r in exact if wcity and r["city"] == wcity), exact[0])
-            if len(exact) > 1:
-                stats["name_state_ambiguous"] += 1
-            matches.append(emit(w, best, "name_state", 100.0))
-            used_nces.add(best["school_id"]); stats["name_state"] += 1
-            continue
-
-        # tier 3: fuzzy on the DISTINCTIVE name core within the same state.
-        wcore = core_name(wnorm)
-        if cands and len(wcore.replace(" ", "")) >= 4:   # skip too-generic cores
-            seen, pool = set(), []
-            for tok in significant_tokens(wcore):
-                for r in token_idx[code].get(tok, ()):
-                    if r["school_id"] not in seen:
-                        seen.add(r["school_id"]); pool.append(r)
-            best_r, best_s = None, -1.0
-            for r in pool:
-                if not r["core"]:
-                    continue
-                # token_sort_ratio on cores: distinctive name, order-insensitive,
-                # NOT inflated by shared generic suffix.
-                s = fuzz.token_sort_ratio(wcore, r["core"])
-                if wcity and r["city"] == wcity:
-                    s = min(100.0, s + 6.0)         # confirming-city boost
-                if s > best_s:
-                    best_s, best_r = s, r
-            if best_r is not None:
-                # Accept on strong core similarity, OR good similarity confirmed
-                # by a matching city in the Wikipedia title.
-                city_ok = bool(wcity) and best_r["city"] == wcity
-                if best_s >= max(args.threshold, 96.0) or (best_s >= args.threshold and city_ok):
-                    matches.append(emit(w, best_r, "fuzzy", best_s))
-                    used_nces.add(best_r["school_id"]); stats["fuzzy"] += 1
-                    continue
-
-        stats["unmatched"] += 1
+    matches = [emit(w, rec, method, score)
+               for _, w, rec, method, score in claims.values()]
+    for m in matches:
+        stats[m["match_method"]] += 1
 
     with open(args.out, "w", newline="", encoding="utf-8") as f:
         wr = csv.DictWriter(f, fieldnames=OUT_FIELDS)
@@ -278,15 +383,17 @@ def main():
     sys.stderr.write(
         f"\n=== matches -> {args.out} ===\n"
         f"  total matched : {len(matches):,} / {len(wiki):,} wiki "
-        f"({100*len(matches)/len(wiki):.1f}%)\n"
+        f"({100*len(matches)/max(len(wiki), 1):.1f}%)\n"
         f"    by nces_id    : {stats['nces_id']:,}\n"
         f"    by name+state : {stats['name_state']:,}  "
         f"(ambiguous: {stats['name_state_ambiguous']:,})\n"
         f"    by fuzzy      : {stats['fuzzy']:,}  (>= {args.threshold:g})\n"
+        f"  nces_conflict : {stats['nces_conflict']:,}  "
+        f"(article dropped: its NCES school was claimed by a stronger match)\n"
         f"  unmatched     : {stats['unmatched']:,}\n"
         f"  matched NCES by sector: public={by_sector['public']:,} private={by_sector['private']:,}\n"
-        f"  distinct NCES schools covered: {len(used_nces):,} / {n_nces:,} "
-        f"({100*len(used_nces)/n_nces:.2f}%)\n"
+        f"  distinct NCES schools covered: {len(matches):,} / {n_nces:,} "
+        f"({100*len(matches)/n_nces:.2f}%)\n"
     )
 
 

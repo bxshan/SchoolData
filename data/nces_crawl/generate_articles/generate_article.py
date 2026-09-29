@@ -30,6 +30,12 @@ HERE = os.path.dirname(__file__)
 MASTER = os.path.join(HERE, "..", "output_all_schools",
                       "all_schools_master.csv")
 
+# Data vintage of each sector's NCES download, used in "As of the <year> school
+# year" (the enrollment/staffing year). Public = CCD search export (membership
+# and staff 2024-25; directory 2025-26), private = PSS 2023-24. Update when
+# re-downloading a newer release (see the `title` field of the NCES Excel form).
+DATA_YEAR = {"public": "2024-25", "private": "2023-24"}
+
 STATE_NAMES = {
     "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas",
     "CA": "California", "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware",
@@ -100,7 +106,7 @@ def _f1(v):
 
 
 _KEEP_UPPER = {"US", "USA", "DC", "II", "III", "IV", "JR", "SR",
-               "ISD", "USD", "SD", "CSD", "ESD", "RSD", "UFSD", "CUSD", "ISD",
+               "ISD", "USD", "SD", "CSD", "ESD", "RSD", "UFSD", "CUSD",
                "HS", "MS", "JSHS", "STEM", "STEAM", "NCEA", "YMCA", "MLK", "JFK",
                "ROTC", "AP", "IB"}
 
@@ -215,7 +221,7 @@ def _render_public(r, year):
 
     loc = PUB_LOCALE.get(r.get("Locale", ""))
     if loc:
-        sentences.append(f"The school is located in {loc}.")
+        sentences.append(f"It is located in {loc}.")
 
     status = (r.get("Status") or "").strip()
     if status and status not in ("Open", ""):
@@ -233,11 +239,11 @@ def _render_public(r, year):
 
     addr, zc = _titlecase(r.get("address", "").strip()), r.get("zip", "").strip()
     if addr and city and state:
-        loc_line = f"The school is located at {addr}, {city}, {r.get('state','')}"
+        loc_line = f"Its street address is {addr}, {city}, {r.get('state','')}"
         if zc:
             loc_line += f" {zc}"
         ph = (r.get("phone") or "").strip()
-        sentences.append(loc_line + (f", and can be reached at {ph}." if ph else "."))
+        sentences.append(loc_line + (f", and its phone number is {ph}." if ph else "."))
     return sentences
 
 
@@ -293,14 +299,19 @@ def _render_private(r, year):
 
     addr, zc = _titlecase(r.get("address", "").strip()), r.get("zip", "").strip()
     if addr and city and state:
-        line = f"The school is located at {addr}, {city}, {r.get('state','')}"
+        line = f"Its street address is {addr}, {city}, {r.get('state','')}"
         sentences.append(line + (f" {zc}." if zc else "."))
     return sentences
 
 
-def render_article(r, year="2021-22"):
-    """Full plaintext article for one NCES master record (public or private)."""
-    sentences = (_render_private if r.get("sector") == "private"
+def render_article(r, year=None):
+    """Full plaintext article for one NCES master record (public or private).
+
+    `year` overrides the data vintage; by default it comes from DATA_YEAR for
+    the record's sector."""
+    sector = "private" if r.get("sector") == "private" else "public"
+    year = year or DATA_YEAR[sector]
+    sentences = (_render_private if sector == "private"
                  else _render_public)(r, year)
     return re.sub(r"\s+", " ", " ".join(sentences)).replace(" ,", ",").strip()
 
@@ -315,7 +326,9 @@ def main():
     ap.add_argument("--master", default=MASTER)
     ap.add_argument("--id", help="NCES school_id")
     ap.add_argument("--name", help="exact school name (first match)")
-    ap.add_argument("--year", default="2021-22")
+    ap.add_argument("--year", default=None,
+                    help="school-year vintage for every article "
+                         "(default: per sector, see DATA_YEAR)")
     ap.add_argument("--demo", action="store_true",
                     help="render a public and a private example")
     args = ap.parse_args()

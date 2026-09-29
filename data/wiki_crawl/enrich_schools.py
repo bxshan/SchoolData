@@ -11,8 +11,14 @@ Pipeline (reads schools.csv -> writes schools_enriched.csv):
   3. ENRICH - for every resolved article add: state, level (high/middle/
               elementary/combined), Wikidata QID, and lat/lon coordinates.
 
-Output columns: title, url, pageid, state, level, wikidata_qid, lat, lon,
-                source_category
+Output columns: title, url, pageid, state, level, description, instance_of,
+                founded, website, school_district, nces_id, postal_code,
+                wikidata_qid, lat, lon, pageviews_60d, thumbnail,
+                source_category, validation
+
+`validation` is carried through from the crawl (school / unverified / defunct /
+out_of_scope / non_school; blank if the input has no such column) so the match
+step can keep only verified schools.
 
 Usage:
     python enrich_schools.py                       # schools.csv -> schools_enriched.csv
@@ -43,7 +49,8 @@ STATES = [
     "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina",
     "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia",
     "Washington", "West Virginia", "Wisconsin", "Wyoming", "District of Columbia",
-    "Puerto Rico", "Guam",
+    "Puerto Rico", "Guam", "American Samoa", "Northern Mariana Islands",
+    "United States Virgin Islands", "U.S. Virgin Islands",
 ]
 _STATES_BY_LEN = sorted(STATES, key=len, reverse=True)
 
@@ -137,9 +144,10 @@ def resolve_and_enrich(session, rows, delay):
     out = {}  # resolved pageid -> record
     titles = [r["title"] for r in rows]
     # keep a map from input title -> original source_category (first wins)
-    src = {}
+    src, val = {}, {}
     for r in rows:
         src.setdefault(r["title"], r["source_category"])
+        val.setdefault(r["title"], r.get("validation", ""))
 
     for i in range(0, len(titles), 50):
         batch = titles[i:i + 50]
@@ -189,6 +197,10 @@ def resolve_and_enrich(session, rows, delay):
                 continue
             pid = page["pageid"]
             if pid in out:
+                # A redirect title has no QID of its own, so the crawl tags it
+                # `unverified`; let a real tag from the target article win.
+                if out[pid]["validation"] in ("", "unverified"):
+                    out[pid]["validation"] = val.get(orig, "") or out[pid]["validation"]
                 continue
             coords = page.get("coordinates")
             lat = coords[0]["lat"] if coords else ""
@@ -220,6 +232,7 @@ def resolve_and_enrich(session, rows, delay):
                 "pageviews_60d": views,
                 "thumbnail": thumb,
                 "source_category": sc,
+                "validation": val.get(orig, ""),
             }
         sys.stderr.write(f"  resolved {min(i + 50, len(titles))}/{len(titles)} "
                          f"-> {len(out)} unique\n")
@@ -354,7 +367,7 @@ def main():
     fields = ["title", "url", "pageid", "state", "level", "description",
               "instance_of", "founded", "website", "school_district",
               "nces_id", "postal_code", "wikidata_qid", "lat", "lon",
-              "pageviews_60d", "thumbnail", "source_category"]
+              "pageviews_60d", "thumbnail", "source_category", "validation"]
     with open(args.out, "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=fields)
         w.writeheader()
