@@ -3,12 +3,13 @@
 Every US K-12 school (public + private) on one map — **red = no Wikipedia article
 yet**. An open dataset and a call to action for closing the school "data desert."
 
-Live data: **122,618** NCES schools (102,130 public + 20,488 private) · **12.2%**
-have an English Wikipedia article — matched by exact Wikidata NCES-id + name/state +
-audited fuzzy against a validation-tagged Wikipedia category crawl (the cleaned
-crawl drops school-shooting events, people, districts, and other non-school pages
-that inflated earlier counts). Private schools are placed via U.S. Census batch
-geocoding of their NCES addresses (Wikidata coords as fallback).
+Live data: STATS_LINE — the same NCES schools and Wikipedia matches as the
+[Hugging Face dataset](https://huggingface.co/datasets/SchoolData/us-k12-schools).
+Schools come from NCES (CCD 2024-25 public, PSS 2023-24 private) and are placed
+with NCES's own coordinates (EDGE geocodes; the PSS public-use file for private
+schools). A school is "on Wikipedia" when the audited matcher in
+`../data/data_publish/` links it to a verified Wikipedia school article (Wikidata
+NCES id, name + state with city/grade-level checks, fuzzy name, or coordinates).
 
 ## Architecture
 
@@ -16,19 +17,16 @@ geocoding of their NCES addresses (Wikidata coords as fallback).
 database to draw the map.
 
 ```
-schooldata/
-│  # Wikipedia crawl → enrich → match now live in ../data/wiki_crawl/
-│  # (produces wiki_nces_matches.csv); this pipeline/ holds only the
-│  # website-specific steps:
+../data/                      # the data pipeline (shared with the HF dataset)
+│   nces_crawl/               #  NCES masters + school_coordinates.csv
+│   wiki_crawl/               #  Wikipedia crawl -> enrich
+│   data_publish/             #  matcher -> output/wiki_nces_matches.csv
+website/
 ├── pipeline/                 # Python — runs locally / on your workstation
-│   ├── geocode_private.py    #  Census batch-geocode NCES private schools -> coords
-│   └── build_dataset.py      #  pull NCES public (102k, lat/lon) + flag has_wikipedia
-│                             #  from wiki_nces_matches.csv; --add-private merges the
-│                             #  geocoded private schools -> web/public/data/schools.json
-├── data/                     # intermediate artifacts
-│   ├── schools.csv           #  Wikipedia school articles (~23k)
-│   ├── schools_enriched.csv  #  enriched version
-│   ├── state_counts.json
+│   ├── build_dataset.py      #  NCES master + coordinates + matches
+│   │                         #  -> web/public/data/schools.json (+ coverage JSON)
+│   └── geocode_private.py    #  legacy (Census geocoding; --urban path only)
+├── data/                     # legacy intermediate artifacts (June 2026 crawl)
 │   └── schools_map.html      #  standalone state choropleth (no build needed)
 └── web/                      # Next.js + Deck.gl + MapLibre frontend (deploy to Vercel)
     ├── app/                  #  app router pages
@@ -46,20 +44,22 @@ gzipped static file on Vercel's CDN (≈12 MB raw, ≈3 MB gzipped). A database
 
 ## Run the pipeline (local)
 
+Run the data pipeline first (see `../data/nces_crawl/README.md` and
+`../data/data_publish/`), then:
+
 ```bash
 cd pipeline
-pip install requests
 python build_dataset.py            # regenerates web/public/data/schools.json
+python build_dataset.py --reflag   # only re-flag has_wikipedia from new matches
 ```
 
-`build_dataset.py` pulls the NCES public-school directory from the Urban
-Institute Education Data API (free, no key) and flags `has_wikipedia` by an exact
-join on the NCES id against `../data/wiki_nces_matches.csv` (the audited matcher
-output). To re-flag an existing `schools.json` without re-pulling the API:
+`build_dataset.py` reads `../../data/nces_crawl/output_all_schools/` (the
+all-schools master and `school_coordinates.csv`) and flags `has_wikipedia` by an
+exact join on the NCES id against `../../data/data_publish/output/wiki_nces_matches.csv`.
+`--urban` keeps the older Urban Institute API pull as a fallback.
 
-```bash
-python build_dataset.py --reflag
-```
+The data CSVs are stored with Git LFS (`brew install git-lfs; git lfs install`);
+`web/public/data/*.json` stays in plain git because Vercel serves it directly.
 
 ## Run the website (local)
 
@@ -73,14 +73,14 @@ npm run dev          # http://localhost:3000
 
 1. Push this repo to GitHub (public repo, e.g. `SchoolData-Web`).
 2. On Vercel: **Add New Project** → import the repo → set **Root Directory** to
-   `schooldata/web` → Deploy. Zero config; `git push` auto-redeploys.
+   `website/web` → Deploy. Zero config; `git push` auto-redeploys.
 3. (Later) Bind a custom domain like `schooldata.org`.
 
 ## Roadmap
 
 - [x] Improve Wikipedia matching (use Wikidata `nces_id` + fuzzy geo/name).
-- [x] Add private schools (NCES PSS) to the map (geocoded via U.S. Census batch
-      geocoder; `build_dataset.py --add-private` merges them into `schools.json`).
+- [x] Add private schools (NCES PSS) to the map.
+- [x] One NCES source for the map and the HF dataset (CCD bulk files + EDGE).
 - [ ] Supabase table for `contact_status` + `ai_generated_draft` (write side).
 - [ ] Sidebar shows AI-generated draft wikitext to copy-paste.
 - [ ] Viewport-based loading (PMTiles / tiled JSON) if dataset outgrows static file.

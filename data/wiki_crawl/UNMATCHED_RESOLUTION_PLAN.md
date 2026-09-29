@@ -4,6 +4,25 @@
 **Full analysis:** [`docs/unmatched-wiki-nces-analysis.md`](../docs/unmatched-wiki-nces-analysis.md)
 **Status:** recommendations only — no code changed yet.
 
+> **Status (2026-09-29, branch `data-pipeline-improvements`).** Most of this plan
+> is implemented; numbers below are from the June 2026 run and paths have moved
+> (`wiki_crawl/output/schools_enriched.csv`, `data_publish/output/wiki_nces_matches.csv`,
+> `nces_crawl/output_all_schools/all_schools_master.csv`).
+>
+> | Item | Where |
+> |---|---|
+> | #7 grade-band guard | `match_wiki_nces.py`: NCES grade span vs article level, all name tiers |
+> | name_state city conflicts | `match_wiki_nces.py`: `city_compatible` in tiers 2–4 |
+> | #8 redirect collapse | `enrich_schools.py`: redirects to non-school pages kept as `validation=redirect` |
+> | #9 location extraction | `enrich_schools.py` `revalidate`: state from Wikidata description, then nearest NCES school (P131 not used) |
+> | #10 rescue QID-no-P31 | `revalidate`: `unverified` rows whose description names a school |
+> | #11 + A2 universities / networks | `revalidate`: higher-ed and network/district descriptions -> `out_of_scope` |
+> | A3 foreign (P17) | `revalidate`: non-US country and no US state -> `out_of_scope` |
+> | A1 `operating` flag | `revalidate` (P576 / historic P31 / description) + past-tense article lead in `prep_data_publish.py` |
+> | B1 geo tier, stale-id crosswalk | `match_wiki_nces.py` tiers `geo` and `nces_id_stale` |
+> | B2 `no_nces_record` label | `data_publish/output/wiki_unmatched.csv` with a `reason` column |
+> | #12 `--include-defunct` | the September re-crawl uses it (defunct rows are tagged, not matched) |
+
 ## TL;DR
 
 Of the **19,469** clean Wikipedia school articles, **15,247 (78%)** match an NCES
