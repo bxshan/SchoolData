@@ -180,6 +180,14 @@ def construct_url(state_code, school_type):
     return f"{base_url}?{'&'.join(params)}"
 
 
+def finished_downloads(paths):
+    """Only a finished .xls counts. Chrome's in-progress files (.crdownload, or
+    hidden ".com.google.Chrome.XXXX" on macOS) must be skipped — grabbing one
+    mid-write silently truncates the state's data (this happened to Utah)."""
+    return [f for f in paths
+            if f.suffix.lower() == '.xls' and not f.name.startswith('.')]
+
+
 def download_state_data(driver, state_name, state_code, school_type, download_dir):
     """Download Excel for one state."""
     logger.info(f"Downloading {state_name} ({state_code})...")
@@ -317,11 +325,7 @@ def download_state_data(driver, state_name, state_code, school_type, download_di
             current_files = set(download_dir.glob('*'))
             new_files = current_files - before_files
 
-            # Only a finished .xls counts. Chrome's in-progress files (.crdownload,
-            # or hidden ".com.google.Chrome.XXXX" on macOS) must be skipped —
-            # grabbing one mid-write silently truncates the state's data.
-            complete_files = [f for f in new_files
-                              if f.suffix.lower() == '.xls' and not f.name.startswith('.')]
+            complete_files = finished_downloads(new_files)
             if complete_files:
                 # Chrome renames to the final name once the write finishes, but
                 # confirm the size has settled before touching the file.
