@@ -6,19 +6,25 @@ Pipeline (reads schools.csv -> writes schools_enriched.csv):
   1. CLEAN  - drop obvious non-school rows (film/TV/song disambig pages,
               churches/cemeteries without "school"/"academy"); optionally drop
               accreditation-association member categories (--exclude-accreditation).
-  2. RESOLVE- batch the MediaWiki API with redirects=1 so redirect pages collapse
-              onto their real target article; de-duplicate by the resolved pageid.
+  2. RESOLVE- batch the MediaWiki API with redirects=1. A redirect whose target is
+              itself a crawled school (e.g. a renamed school) collapses onto that
+              article; de-duplicate by the resolved pageid. A redirect to any other
+              page (usually the school's town or district: the school has no
+              article of its own) is kept under its own title, tagged
+              validation=redirect with `redirect_to` set, so the town/district
+              page never enters the set posing as a school.
   3. ENRICH - for every resolved article add: state, level (high/middle/
               elementary/combined), Wikidata QID, and lat/lon coordinates.
 
 Output columns: title, url, pageid, state, level, description, instance_of,
                 founded, website, school_district, nces_id, postal_code,
                 wikidata_qid, lat, lon, pageviews_60d, thumbnail,
-                source_category, validation
+                source_category, validation, redirect_to
 
 `validation` is carried through from the crawl (school / unverified / defunct /
 out_of_scope / non_school; blank if the input has no such column) so the match
-step can keep only verified schools.
+step can keep only verified schools. Enrich adds one tag of its own, `redirect`
+(see RESOLVE).
 
 Usage:
     python enrich_schools.py                       # schools.csv -> schools_enriched.csv
@@ -62,6 +68,11 @@ TITLE_DROP = re.compile(
 )
 CHURCH_CEM = re.compile(r"\b(church|cemetery|chapel|congregation)\b", re.I)
 SCHOOLISH = re.compile(r"school|academ|yeshiv|institute|seminary|montessori", re.I)
+ENRICHED_FIELDS = ["title", "url", "pageid", "state", "level", "description",
+                   "instance_of", "founded", "website", "school_district",
+                   "nces_id", "postal_code", "wikidata_qid", "lat", "lon",
+                   "pageviews_60d", "thumbnail", "source_category", "validation",
+                   "redirect_to"]
 ACCREDITATION = re.compile(r"accredit|commission on|association of", re.I)
 
 
@@ -144,10 +155,12 @@ def resolve_and_enrich(session, rows, delay):
     out = {}  # resolved pageid -> record
     titles = [r["title"] for r in rows]
     # keep a map from input title -> original source_category (first wins)
-    src, val = {}, {}
+    src, val, orig_pid = {}, {}, {}
     for r in rows:
         src.setdefault(r["title"], r["source_category"])
         val.setdefault(r["title"], r.get("validation", ""))
+        orig_pid.setdefault(r["title"], r.get("pageid", ""))
+    crawled = set(src)
 
     for i in range(0, len(titles), 50):
         batch = titles[i:i + 50]
@@ -192,7 +205,19 @@ def resolve_and_enrich(session, rows, delay):
 
         bytitle = pages
         for orig in batch:
-            page = bytitle.get(resolved_title(orig))
+            target = resolved_title(orig)
+            if norm.get(orig, orig) in redir and target not in crawled:
+                # The school has no article of its own: its title redirects to
+                # a page outside the crawl (usually its town or district, e.g.
+                # "Joliet Montessori School" -> "Crest Hill, Illinois"). Keep it,
+                # labeled, instead of letting the town/district page pose as a
+                # school or silently dropping the row.
+                key = ("redirect", orig)
+                if key not in out:
+                    out[key] = _redirect_record(orig, orig_pid.get(orig, ""),
+                                                target, src.get(orig, ""))
+                continue
+            page = bytitle.get(target)
             if not page or page.get("missing") or "pageid" not in page:
                 continue
             pid = page["pageid"]
@@ -233,6 +258,7 @@ def resolve_and_enrich(session, rows, delay):
                 "thumbnail": thumb,
                 "source_category": sc,
                 "validation": val.get(orig, ""),
+                "redirect_to": "",
             }
         sys.stderr.write(f"  resolved {min(i + 50, len(titles))}/{len(titles)} "
                          f"-> {len(out)} unique\n")
@@ -241,6 +267,22 @@ def resolve_and_enrich(session, rows, delay):
 
 
 WIKIDATA_API = "https://www.wikidata.org/w/api.php"
+
+
+def _redirect_record(title, pageid, target, source_category):
+    """Row for a crawled title that is only a redirect to a non-school page."""
+    rec = {k: "" for k in ENRICHED_FIELDS}
+    rec.update({
+        "title": title,
+        "url": "https://en.wikipedia.org/wiki/" + title.replace(" ", "_"),
+        "pageid": pageid,
+        "state": state_of(source_category) or state_of(title),
+        "level": level_of(title + " | " + source_category),
+        "source_category": source_category,
+        "validation": "redirect",
+        "redirect_to": target,
+    })
+    return rec
 
 
 def _claim_value(claims, pid):
@@ -364,10 +406,7 @@ def main():
     if not args.no_wikidata:
         enrich_wikidata(session, records, args.delay)
 
-    fields = ["title", "url", "pageid", "state", "level", "description",
-              "instance_of", "founded", "website", "school_district",
-              "nces_id", "postal_code", "wikidata_qid", "lat", "lon",
-              "pageviews_60d", "thumbnail", "source_category", "validation"]
+    fields = ENRICHED_FIELDS
     with open(args.out, "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=fields)
         w.writeheader()

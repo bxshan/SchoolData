@@ -163,6 +163,91 @@ def school_levels(norm):
     return {LEVEL_WORDS[t] for t in norm.split() if t in LEVEL_WORDS}
 
 
+# Grade number -> level bucket (PK = -1, K = 0).
+def _grade_bucket(g):
+    return "elementary" if g <= 5 else "middle" if g <= 8 else "high"
+
+
+_PUBLIC_GRADE = {"PK": -1, "KG": 0, "K": 0}
+_PSS_ENROLL = [(-1, "PSS_ENROLL_PK"), (0, "PSS_ENROLL_K")] + \
+              [(g, f"PSS_ENROLL_{g}") for g in range(1, 13)]
+
+
+def _public_grade(code):
+    code = (code or "").strip().upper()
+    if code in _PUBLIC_GRADE:
+        return _PUBLIC_GRADE[code]
+    return int(code) if code.isdigit() and 1 <= int(code) <= 12 else None
+
+
+def _num(v):
+    try:
+        return float(v) > 0
+    except (TypeError, ValueError):
+        return False
+
+
+def grade_levels(r):
+    """Level buckets an NCES school actually serves, from its grade span.
+
+    Public: CCD low/high grade codes (PK, KG, 01-12; UG/AE/13 and blanks give no
+    span). Private: the grades with non-zero PSS enrollment — the PSS LoGrade/
+    HiGrade codes are an undocumented numeric scheme, so they aren't used.
+    Returns an empty set when the span is unknown."""
+    if r.get("sector") == "private":
+        grades = [g for g, col in _PSS_ENROLL if _num(r.get(col))]
+        if not grades:
+            return set()
+        lo, hi = grades[0], grades[-1]
+    else:
+        lo, hi = _public_grade(r.get("low_grade")), _public_grade(r.get("high_grade"))
+        if lo is None or hi is None or lo > hi:
+            return set()
+    return {_grade_bucket(g) for g in range(lo, hi + 1)}
+
+
+def wiki_levels(w, wnorm, use_categories):
+    """Levels a Wikipedia school claims: level words in its title, else (when
+    use_categories) the enrich step's `level`, which is inferred from categories
+    and so less reliable ('combined' and blank impose no constraint)."""
+    lv = school_levels(wnorm)
+    if not lv and use_categories and w.get("level") in ("high", "middle", "elementary"):
+        lv = {w["level"]}
+    return lv
+
+
+# Title cities that don't pin down an NCES city: NCES files New York City
+# schools under borough or neighborhood names (Bronx, Astoria, Flushing, ...).
+_UNCONSTRAINED_CITIES = {"new york", "manhattan", "brooklyn", "queens", "bronx",
+                         "the bronx", "staten island"}
+_CITY_FILLER = {"city", "township", "town", "village", "borough", "north", "south",
+                "east", "west", "new", "saint", "fort", "port", "mount", "lake",
+                "upper", "lower", "the", "of"}
+
+
+def _city_norm(c):
+    return norm_name(c or "")
+
+
+def city_compatible(title_city_name, nces_city):
+    """True unless the title's city clearly names a different place. Tolerates
+    punctuation/abbreviations ('St. George' = 'st george'), 'X City'/'X
+    Township' vs 'X Hills' (shared distinctive word), and NYC boroughs."""
+    a, b = _city_norm(title_city_name), _city_norm(nces_city)
+    if not a or not b or a == b or a in _UNCONSTRAINED_CITIES:
+        return True
+    ta = {t for t in a.split() if t not in _CITY_FILLER}
+    tb = {t for t in b.split() if t not in _CITY_FILLER}
+    return bool(ta & tb)
+
+
+def levels_compatible(wlevels, rec):
+    """False only when both sides state levels and they cannot overlap. NCES
+    levels come from the grade span, falling back to level words in the name."""
+    nlevels = rec["grade_levels"] or rec["levels"]
+    return not wlevels or not nlevels or bool(wlevels & nlevels)
+
+
 def significant_tokens(norm):
     return {t for t in norm.split() if len(t) >= 4}
 
@@ -186,6 +271,7 @@ def load_nces(path):
             }
             rec["core"] = core_name(rec["norm"])
             rec["levels"] = school_levels(rec["norm"])
+            rec["grade_levels"] = grade_levels(r)
             rec["tokens"] = significant_tokens(rec["core"])
             if sid:
                 by_id[sid] = rec
@@ -256,15 +342,27 @@ def match_one(w, by_id, by_state, token_idx, threshold, stats):
     code = state_code(w["state"])
     wnorm = norm_name(w["title"])
     wcity = title_city(w["title"])
+    wexplicit = title_explicit_city(w["title"])
     cands = by_state.get(code, []) if code else []
 
-    # tier 2: exact normalized name + state (city-disambiguated)
+    # tier 2: exact normalized name + state (city-disambiguated). Same-named
+    # schools are common, so a candidate must not contradict the title's city or
+    # the article's grade level; if every candidate does, fall through to fuzzy.
     exact = [r for r in cands if r["norm"] == wnorm and wnorm]
     if exact:
-        best = next((r for r in exact if wcity and r["city"] == wcity), exact[0])
-        if len(exact) > 1:
-            stats["name_state_ambiguous"] += 1
-        return best, "name_state", 100.0
+        # Title level words only here: an exact name match is strong evidence,
+        # so the noisier category-inferred level isn't allowed to veto it.
+        tlevels = wiki_levels(w, wnorm, use_categories=False)
+        ok = [r for r in exact
+              if city_compatible(wexplicit, r["city"])
+              and levels_compatible(tlevels, r)]
+        if len(ok) < len(exact):
+            stats["name_state_rejected"] += len(exact) - len(ok)
+        if ok:
+            best = next((r for r in ok if wcity and r["city"] == wcity), ok[0])
+            if len(ok) > 1:
+                stats["name_state_ambiguous"] += 1
+            return best, "name_state", 100.0
 
     # tier 3: fuzzy on the DISTINCTIVE name core within the same state.
     wcore = core_name(wnorm)
@@ -276,17 +374,17 @@ def match_one(w, by_id, by_state, token_idx, threshold, stats):
             if r["school_id"] not in seen:
                 seen.add(r["school_id"]); pool.append(r)
     best_r, best_s = None, -1.0
-    wexplicit = title_explicit_city(w["title"])
-    wlevels = school_levels(wnorm)
+    wlevels = wiki_levels(w, wnorm, use_categories=True)
     for r in pool:
         if not r["core"]:
             continue
         # The core drops level words and ignores place, so reject candidates
-        # that contradict the title: a different city named in "(City, State)",
-        # or disjoint grade levels ("Troy High School" vs "Troy Elementary").
-        if wexplicit and r["city"] != wexplicit:
+        # that contradict the title: a different city named in the title, or a
+        # grade span that can't overlap the article's level ("Troy High School"
+        # vs a K-5 "Troy Elementary").
+        if not city_compatible(wexplicit, r["city"]):
             continue
-        if wlevels and r["levels"] and not (wlevels & r["levels"]):
+        if not levels_compatible(wlevels, r):
             continue
         # token_sort_ratio on cores: distinctive name, order-insensitive,
         # NOT inflated by shared generic suffix.
@@ -386,7 +484,8 @@ def main():
         f"({100*len(matches)/max(len(wiki), 1):.1f}%)\n"
         f"    by nces_id    : {stats['nces_id']:,}\n"
         f"    by name+state : {stats['name_state']:,}  "
-        f"(ambiguous: {stats['name_state_ambiguous']:,})\n"
+        f"(ambiguous: {stats['name_state_ambiguous']:,}; "
+        f"candidates rejected on city/level: {stats['name_state_rejected']:,})\n"
         f"    by fuzzy      : {stats['fuzzy']:,}  (>= {args.threshold:g})\n"
         f"  nces_conflict : {stats['nces_conflict']:,}  "
         f"(article dropped: its NCES school was claimed by a stronger match)\n"
