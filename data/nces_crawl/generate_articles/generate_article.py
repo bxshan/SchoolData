@@ -208,9 +208,10 @@ def _render_public(r, year):
     if loc:
         sentences.append(f"It is located in {loc}.")
 
-    status = (r.get("Status") or "").strip()
-    if status and status not in ("Open", ""):
-        sentences.append(f"In federal records it is listed with a status of \"{status}\".")
+    # NCES status is a per-year bookkeeping code (Added, Changed Boundary/Agency,
+    # Reopened, ...); only "New" says something a reader cares about.
+    if (r.get("Status") or "").strip() == "New":
+        sentences.append(f"It opened in the {year} school year.")
 
     size = _size_sentence(r, year)
     if size:

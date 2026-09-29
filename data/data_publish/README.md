@@ -171,7 +171,6 @@ git lfs pull                                   # data CSVs are stored in Git LFS
 python nces_crawl/build_from_bulk.py --download
 python nces_crawl/download_schools.py --type private
 python nces_crawl/combine_all_schools.py
-python nces_crawl/generate_articles/run_samples.py --n -1 --out articles.jsonl
 
 # Wikipedia: crawl -> enrich -> match -> article text
 python wiki_crawl/crawl_k12_schools.py --include-defunct
@@ -180,7 +179,7 @@ python data_publish/match_wiki_nces.py
 python wiki_crawl/fetch_article_text.py --matches data_publish/output/wiki_nces_matches.csv
 
 # Release
-python data_publish/prep_data_publish.py       # -> data_publish/output/dist/
+python data_publish/prep_data_publish.py       # renders NCES text; -> output/dist/
 python data_publish/validate_publish.py --expect-rows 120000
 ```
 

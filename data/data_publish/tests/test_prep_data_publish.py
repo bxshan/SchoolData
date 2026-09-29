@@ -63,3 +63,10 @@ def test_describes_closed_school():
     assert p.describes_closed_school("Blue School was a progressive school in NYC.")
     assert not p.describes_closed_school("Troy High School is a public school. It was founded in 1920.")
     assert not p.describes_closed_school("St. Mary's, which was a convent, is a Catholic school.")
+
+
+def test_stale_match_csv_is_refused():
+    import pytest
+    with pytest.raises(SystemExit):
+        p.check_matches_against_master({"999": {}}, {"1": gen()})
+    p.check_matches_against_master({"1": {}}, {"1": gen(), "2": gen()})   # fine

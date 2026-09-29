@@ -11,7 +11,7 @@ PUBLIC (sector = public, NCES CCD)
 {Name} is a public [charter ][{type} ][{level} ]school[ in {City}, {County}, {State}][, serving grades {GL}–{GH}].
 [It is part of {District}.]
 [It is located in {Locale}.]
-[In federal records it is listed with a status of "{Status}".]
+[It opened in the {Year} school year.]                      (only when Status is "New")
 [As of the {Year} school year, it enrolled {Enrollment} students
  [and employed about {Teachers} teachers, a student–teacher ratio of roughly {Ratio}:1].]
 [About {Lunch}% of students were eligible for free or reduced-price lunch.]
@@ -48,7 +48,7 @@ Field mapping (master column -> token):
                 "the <name> school district" unless it already names one; omitted
                 when it repeats the school name)
     Locale    = Locale label, e.g. "Town, Distant" -> "a distant town"
-    Status    = Status, shown only when not "Open"
+    Status    = Status; only "New" produces a sentence
     Lunch     = round((Free Lunch + Reduced Lunch) / total_students * 100)
     Phone     = phone
   private only:

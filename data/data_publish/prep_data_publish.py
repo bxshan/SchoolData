@@ -4,8 +4,10 @@
 
 One row per NCES school. Inputs:
 
-  1. Generated articles JSONL  (data/nces_crawl/output_generated_articles/*.jsonl)
-     {school_id, school_name, sector, state, article} — the deterministic NCES text
+  1. NCES all-schools master  (data/nces_crawl/output_all_schools/all_schools_master.csv)
+     every row's NCES text is rendered from it at build time with the
+     deterministic generator, so it can never be stale (--articles uses a
+     pre-rendered JSONL instead)
   2. Wiki<->NCES match CSV      (output/wiki_nces_matches.csv, from match_wiki_nces.py)
   3. Wikipedia article text    (data/wiki_crawl/output/wiki_articles.jsonl, from
      wiki_crawl/fetch_article_text.py) {pageid, title, revid, text}
@@ -51,13 +53,14 @@ from datetime import datetime, timezone
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.join(HERE, "output")
 DIST_DIR = os.path.join(OUT_DIR, "dist")
-DEFAULT_ARTICLES = os.path.join(HERE, "..", "nces_crawl", "output_generated_articles")
+DEFAULT_MASTER = os.path.join(HERE, "..", "nces_crawl", "output_all_schools",
+                              "all_schools_master.csv")
 DEFAULT_MATCHES = os.path.join(OUT_DIR, "wiki_nces_matches.csv")
 DEFAULT_WIKI_TEXT = os.path.join(HERE, "..", "wiki_crawl", "output", "wiki_articles.jsonl")
 CARD_FILES = ("README.md", "CHANGELOG.md", "LICENSE")
 
 sys.path.insert(0, os.path.join(HERE, "..", "nces_crawl", "generate_articles"))
-from generate_article import DATA_YEAR  # noqa: E402  (data vintage per sector)
+from generate_article import DATA_YEAR, render_article  # noqa: E402
 sys.path.insert(0, os.path.join(HERE, ".."))
 from common.states import USPS_TO_NAME  # noqa: E402
 
@@ -66,6 +69,30 @@ FIELDS = ["nces_id", "name", "state", "sector", "text", "from_wikipedia",
 NCES_SOURCE = {"public": f"NCES CCD {DATA_YEAR['public']}",
                "private": f"NCES PSS {DATA_YEAR['private']}"}
 WIKI_LICENSE, NCES_LICENSE = "CC-BY-SA-4.0", "CC0-1.0"
+
+
+def render_generated(master_path):
+    """Render every master row with the deterministic article generator
+    -> {nces_id: row} (same shape as load_generated)."""
+    out = {}
+    with open(master_path, newline="", encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            sid = r["school_id"].strip()
+            if sid and sid not in out:
+                out[sid] = {"name": r["school_name"], "state": r["state"],
+                            "sector": r["sector"], "text": render_article(r)}
+    sys.stderr.write(f"rendered NCES articles: {len(out):,} schools from {master_path}\n")
+    return out
+
+
+def check_matches_against_master(matches, generated):
+    """Every matched NCES id must exist in this build's master; otherwise the
+    match CSV was built from an older master and must be regenerated."""
+    stale = sorted(set(matches) - set(generated))
+    if stale:
+        sys.exit(f"{len(stale):,} matched NCES ids are not in the current master "
+                 f"(e.g. {stale[:3]}) — the match CSV is stale.\n"
+                 f"  re-run: python match_wiki_nces.py")
 
 
 def load_generated(path):
@@ -288,8 +315,11 @@ def _git(*args):
 
 def main():
     ap = argparse.ArgumentParser(description="Build the articles dataset for Hugging Face.")
-    ap.add_argument("--articles", default=DEFAULT_ARTICLES,
-                    help="generated-article JSONL file or dir")
+    ap.add_argument("--master", default=DEFAULT_MASTER,
+                    help="NCES all-schools master; NCES text is rendered from it")
+    ap.add_argument("--articles", default=None,
+                    help="use a pre-rendered article JSONL (file or dir) instead of "
+                         "rendering from --master")
     ap.add_argument("--matches", default=DEFAULT_MATCHES, help="wiki<->NCES match CSV")
     ap.add_argument("--wiki-text", default=DEFAULT_WIKI_TEXT,
                     help="Wikipedia text JSONL from fetch_article_text.py")
@@ -303,11 +333,13 @@ def main():
     args = ap.parse_args()
     state = args.state.upper() if args.state else None
 
-    generated = load_generated(args.articles)
+    generated = (load_generated(args.articles) if args.articles
+                 else render_generated(args.master))
     if args.skip_match:
         matches, wiki_text = {}, {}
     else:
         matches, wiki_text = load_matches(args.matches), load_wiki_text(args.wiki_text)
+        check_matches_against_master(matches, generated)
     rows, stats = build_rows(generated, matches, wiki_text, args.min_chars, state)
     if not rows:
         sys.exit("no rows to write")
@@ -340,7 +372,8 @@ def main():
         "matched_to_closed_school_article": stats["closed_school"],
         "text_chars": sum(len(r["text"]) for r in rows),
     }
-    inputs = {"generated_articles": args.articles}
+    inputs = ({"generated_articles": args.articles} if args.articles
+              else {"nces_master": args.master})
     if not args.skip_match:
         inputs.update(matches=args.matches, wiki_text=args.wiki_text)
     manifest = {

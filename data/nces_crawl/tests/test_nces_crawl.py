@@ -55,3 +55,10 @@ def test_article_does_not_repeat_located_phrasing():
 def test_article_never_invents_missing_fields():
     text = ga.render_article({"sector": "public", "school_name": "X SCHOOL", "state": "AL"})
     assert text == "X School is a public school in Alabama."
+
+
+def test_only_new_status_becomes_a_sentence():
+    assert "It opened in the 2024-25 school year." in ga.render_article(_public(Status="New"), year="2024-25")
+    for status in ("Open", "Added", "Changed Boundary/Agency", "Reopened"):
+        text = ga.render_article(_public(Status=status))
+        assert "status" not in text.lower() and "opened in" not in text
