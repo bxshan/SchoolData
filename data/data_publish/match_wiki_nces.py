@@ -1,39 +1,40 @@
 #!/usr/bin/env python3
 # Author: Boxuan Shan + support from Claude Opus 4.8
-"""Match the cleaned Wikipedia school set against the NCES master and write a CSV
-of all matches.
+"""Match verified Wikipedia school articles to NCES schools; write the matches and
+the unmatched articles (with a reason).
 
-Matching is tiered; the first tier that hits wins for each Wikipedia school:
+Tiers — the first that yields a match wins for each article:
 
-  1. nces_id    - exact Wikidata NCES-ID (P2484) -> NCES public `school_id`.
-  2. name_state - exact normalized name + state. When several NCES schools share
-                  the name in that state, the one whose city appears in the
-                  Wikipedia title is preferred (else the first; counted ambiguous).
-  3. fuzzy      - best similarity of the distinctive name core (generic words
-                  like "high school"/"academy" removed) within the same state,
-                  using rapidfuzz token_sort_ratio (falls back to stdlib
-                  difflib). A shared city in the Wikipedia title boosts the
-                  score. Accepted at >= 96, or >= --threshold with a city match.
-                  Candidates are skipped when the title's "(City, State)" names
-                  a different city, or when both names carry grade-level words
-                  that don't overlap (high vs elementary), since the core
-                  comparison ignores both.
+  1.  nces_id       Wikidata NCES id (P2484) equals an NCES school_id.
+  1b. nces_id_stale Wikidata carries an id NCES has since re-issued: same state
+                    and 5-digit school number, name core similarity >= 80.
+  2.  name_state    normalized name + state are identical.
+  3.  fuzzy         best similarity of the distinctive name core (generic words
+                    like "high school"/"academy" removed) within the state,
+                    rapidfuzz token_sort_ratio (stdlib difflib fallback); accepted
+                    at >= 96, or >= --threshold when the title's city matches.
+  4.  geo           the nearest NCES school within 1 km of the article's
+                    coordinates that shares a distinctive, non-place name word
+                    and whose name core is broadly similar (token_set >= 60).
 
-Only Wikipedia rows whose crawl `validation` tag is in --statuses (default:
-`school`) are matched, so events, people, districts and defunct schools tagged by
-crawl_k12_schools.py never reach the NCES join.
+Checks on tiers 2-4: a candidate is dropped when it contradicts the article —
+a different city named in the title ("(City, State)" or "(City)"), or an NCES
+grade span that can't serve the article's level (a high-school article is never
+put on a K-5 school). Equally good candidates (same-named schools, fuzzy ties)
+are resolved by the title's city, then by the article's coordinates (<= 50 km);
+otherwise the article stays unmatched rather than guessing.
 
-Each NCES school is claimed by at most one Wikipedia article: when several
-articles land on the same school, the strongest match wins (nces_id > name_state
-> fuzzy, then higher score, then more pageviews) and the rest are counted as
-`nces_conflict` and left unmatched.
+Only rows whose `validation` tag is in --statuses (default: school) are matched,
+so people, events, districts, networks, colleges, closed schools and redirects
+never reach the join. Each NCES school keeps at most one article: the strongest
+match wins (tier, then score, then pageviews); the rest are `nces_conflict`.
 
-This recovers private-school matches that the ID join misses (NCES private
-schools have no Wikidata NCES-ID), at the cost of some fuzziness — hence the
-score column so low-confidence rows can be reviewed or filtered.
+Outputs (in output/): wiki_nces_matches.csv, and wiki_unmatched.csv with a
+reason per unmatched article (not_operating / no_state / lost_nces_conflict /
+no_nces_record_or_variant_name).
 
 Usage:
-    python match_wiki_nces.py            # defaults below -> wiki_nces_matches.csv
+    python match_wiki_nces.py
     python match_wiki_nces.py --threshold 90 --out matches.csv
     python match_wiki_nces.py --statuses school,unverified
 """
@@ -60,6 +61,15 @@ except Exception:                       # pragma: no cover - portability fallbac
         def token_sort_ratio(a, b):
             ta, tb = " ".join(sorted(a.split())), " ".join(sorted(b.split()))
             return difflib.SequenceMatcher(None, ta, tb).ratio() * 100
+
+        @staticmethod
+        def token_set_ratio(a, b):
+            sa, sb = set(a.split()), set(b.split())
+            common = " ".join(sorted(sa & sb))
+            ra = " ".join(sorted(sa - sb)); rb = " ".join(sorted(sb - sa))
+            pairs = [(common, (common + " " + ra).strip()), (common, (common + " " + rb).strip()),
+                     ((common + " " + ra).strip(), (common + " " + rb).strip())]
+            return max(difflib.SequenceMatcher(None, x, y).ratio() for x, y in pairs) * 100
     _BACKEND = "difflib"
 
 _ABBREV = [
@@ -349,19 +359,50 @@ def match_one(w, by_id, by_state, token_idx, threshold, stats, geo=None):
         if len(ok) < len(exact):
             stats["name_state_rejected"] += len(exact) - len(ok)
         if ok:
-            best = next((r for r in ok if wcity and r["city"] == wcity), ok[0])
-            if len(ok) > 1:
-                stats["name_state_ambiguous"] += 1
-            return best, "name_state", 100.0
+            best = pick_one(ok, w, wcity, stats)
+            if best is not None:
+                return best, "name_state", 100.0
+            return None          # same-named schools and nothing to choose by
 
     wcore = core_name(wnorm)
-    hit = _fuzzy(w, wnorm, wcore, wcity, wexplicit, code, cands, token_idx, threshold)
+    hit = _fuzzy(w, wnorm, wcore, wcity, wexplicit, code, cands, token_idx, threshold, stats)
     if hit is None and geo is not None:
         hit = _geo(w, wnorm, wcore, wexplicit, geo)
     return hit
 
 
-def _fuzzy(w, wnorm, wcore, wcity, wexplicit, code, cands, token_idx, threshold):
+def _km(lat1, lon1, lat2, lon2):
+    return 111.0 * math.hypot(lat2 - lat1, (lon2 - lon1) * math.cos(math.radians(lat1)))
+
+
+PICK_MAX_KM = 50.0
+
+
+def pick_one(cands, w, wcity, stats):
+    """Choose among equally good candidates (same-named schools in a state, or a
+    fuzzy-score tie) without guessing: the one in the title's city, else the one
+    nearest the article's coordinates (within PICK_MAX_KM), else None."""
+    if len(cands) == 1:
+        return cands[0]
+    stats["ambiguous"] += 1
+    in_city = [r for r in cands if wcity and r["city"] == wcity]
+    if len(in_city) == 1:
+        return in_city[0]
+    try:
+        lat, lon = float(w.get("lat") or ""), float(w.get("lon") or "")
+    except ValueError:
+        lat = None
+    if lat is not None:
+        near = sorted((_km(lat, lon, r["lat"], r["lon"]), r["school_id"], r)
+                      for r in (in_city or cands) if r.get("lat") is not None)
+        if near and near[0][0] <= PICK_MAX_KM:
+            stats["ambiguous_resolved_by_coords"] += 1
+            return near[0][2]
+    stats["ambiguous_skipped"] += 1
+    return None
+
+
+def _fuzzy(w, wnorm, wcore, wcity, wexplicit, code, cands, token_idx, threshold, stats):
     """tier 3: fuzzy on the DISTINCTIVE name core within the same state."""
     if not cands or len(wcore.replace(" ", "")) < 4:   # skip too-generic cores
         return None
@@ -370,7 +411,7 @@ def _fuzzy(w, wnorm, wcore, wcity, wexplicit, code, cands, token_idx, threshold)
         for r in token_idx[code].get(tok, ()):
             if r["school_id"] not in seen:
                 seen.add(r["school_id"]); pool.append(r)
-    best_r, best_s = None, -1.0
+    best_s, best = -1.0, []
     wlevels = wiki_levels(w, wnorm, use_categories=True)
     for r in pool:
         if not r["core"]:
@@ -389,7 +430,12 @@ def _fuzzy(w, wnorm, wcore, wcity, wexplicit, code, cands, token_idx, threshold)
         if wcity and r["city"] == wcity:
             s = min(100.0, s + 6.0)         # confirming-city boost
         if s > best_s:
-            best_s, best_r = s, r
+            best_s, best = s, [r]
+        elif s == best_s:
+            best.append(r)
+    if not best:
+        return None
+    best_r = pick_one(best, w, wcity, stats)
     if best_r is None:
         return None
     # Accept on strong core similarity, OR good similarity confirmed by a
@@ -415,14 +461,14 @@ class GeoIndex:
         for dy in range(-reach, reach + 1):
             for dx in range(-reach, reach + 1):
                 for r in self.grid.get((cy + dy, cx + dx), ()):
-                    km = 111.0 * math.hypot(r["lat"] - lat,
-                                            (r["lon"] - lon) * math.cos(math.radians(lat)))
+                    km = _km(lat, lon, r["lat"], r["lon"])
                     if km <= max_km:
                         out.append((km, r))
         return sorted(out, key=lambda t: t[0])
 
 
 GEO_MAX_KM = 1.0
+GEO_MIN_SIMILARITY = 60
 
 
 def _geo(w, wnorm, wcore, wexplicit, geo):
@@ -438,8 +484,15 @@ def _geo(w, wnorm, wcore, wexplicit, geo):
         return None
     wlevels = wiki_levels(w, wnorm, use_categories=True)
     for km, r in geo.near(lat, lon, GEO_MAX_KM):
-        if (wtoks & r["tokens"] and city_compatible(wexplicit, r["city"])
-                and levels_compatible(wlevels, r)):
+        # A shared *place* word proves nothing nearby ("Wichita Falls High School"
+        # vs "Premier HS - Wichita Falls"), so the shared word must not be part
+        # of the school's city, and the name cores must be broadly similar.
+        place = set(_city_norm(r["city"]).split())
+        if not ((wtoks & r["tokens"]) - place):
+            continue
+        if fuzz.token_set_ratio(wcore, r["core"]) < GEO_MIN_SIMILARITY:
+            continue
+        if city_compatible(wexplicit, r["city"]) and levels_compatible(wlevels, r):
             return r, "geo", round(100.0 * (1 - km / GEO_MAX_KM), 1)
     return None
 
@@ -518,12 +571,12 @@ def main():
 
     stats = defaultdict(int)
     # nces school_id -> (rank key, wiki row, nces record, method, score)
-    claims, unmatched = {}, []
+    claims, unmatched = {}, set()
     for w in wiki:
         hit = match_one(w, by_id, by_state, token_idx, args.threshold, stats, geo)
         if hit is None:
             stats["unmatched"] += 1
-            unmatched.append(w)
+            unmatched.add(w["pageid"])
             continue
         rec, method, score = hit
         key = (METHOD_RANK[method], -score, -_pageviews(w))
@@ -554,7 +607,7 @@ def main():
         for w in wiki:
             if w["pageid"] in matched_pages:
                 continue
-            reason = "lost_nces_conflict" if w not in unmatched else unmatched_reason(w)
+            reason = "lost_nces_conflict" if w["pageid"] not in unmatched else unmatched_reason(w)
             reasons[reason] += 1
             wr.writerow({**w, "reason": reason})
 
@@ -568,11 +621,13 @@ def main():
         f"({100*len(matches)/max(len(wiki), 1):.1f}%)\n"
         f"    by nces_id    : {stats['nces_id']:,}\n"
         f"    by name+state : {stats['name_state']:,}  "
-        f"(ambiguous: {stats['name_state_ambiguous']:,}; "
-        f"candidates rejected on city/level: {stats['name_state_rejected']:,})\n"
+        f"(candidates rejected on city/level: {stats['name_state_rejected']:,})\n"
         f"    by stale id   : {stats['nces_id_stale']:,}\n"
         f"    by fuzzy      : {stats['fuzzy']:,}  (>= {args.threshold:g})\n"
         f"    by geo        : {stats['geo']:,}  (<= {GEO_MAX_KM:g} km + shared name token)\n"
+        f"  ambiguous     : {stats['ambiguous']:,} same-named/tied candidates -> "
+        f"{stats['ambiguous_resolved_by_coords']:,} resolved by coordinates, "
+        f"{stats['ambiguous_skipped']:,} left unmatched\n"
         f"  nces_conflict : {stats['nces_conflict']:,}  "
         f"(article dropped: its NCES school was claimed by a stronger match)\n"
         f"  unmatched     : {stats['unmatched']:,}  -> {_out(args.unmatched)}\n"

@@ -164,3 +164,33 @@ def test_one_article_per_nces_school(tmp_path, monkeypatch, capsys):
     rows = list(csv.DictReader(open(out)))
     assert len(rows) == 1                               # one article per school
     assert rows[0]["match_method"] == "nces_id"         # the strongest tier wins
+
+
+def _with_coords(rec, lat, lon):
+    rec["lat"], rec["lon"] = lat, lon
+    return rec
+
+
+def test_same_named_schools_without_city_are_not_guessed(nces):
+    db = nces(pub("1", "Bridges Academy", "san jose", "09", "12", state="CA"),
+              pub("2", "Bridges Academy", "studio city", "09", "12", state="CA"))
+    assert match(wiki("Bridges Academy", state="California"), db) is None
+
+
+def test_same_named_schools_resolved_by_article_coordinates(nces):
+    by_id, by_state, idx = nces(pub("1", "Bridges Academy", "san jose", "09", "12", state="CA"),
+                                pub("2", "Bridges Academy", "studio city", "09", "12", state="CA"))
+    _with_coords(by_id["1"], 37.33, -121.89)
+    _with_coords(by_id["2"], 34.14, -118.39)
+    w = {**wiki("Bridges Academy", state="California"), "lat": "34.15", "lon": "-118.40"}
+    rec, method, _ = m.match_one(w, by_id, by_state, idx, 88.0, defaultdict(int))
+    assert (rec["school_id"], method) == ("2", "name_state")
+
+
+def test_coordinates_too_far_away_do_not_decide(nces):
+    by_id, by_state, idx = nces(pub("1", "Bridges Academy", "san jose", "09", "12", state="CA"),
+                                pub("2", "Bridges Academy", "studio city", "09", "12", state="CA"))
+    _with_coords(by_id["1"], 37.33, -121.89)
+    _with_coords(by_id["2"], 34.14, -118.39)
+    w = {**wiki("Bridges Academy", state="California"), "lat": "40.0", "lon": "-100.0"}
+    assert m.match_one(w, by_id, by_state, idx, 88.0, defaultdict(int)) is None
