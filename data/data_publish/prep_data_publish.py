@@ -15,8 +15,9 @@ Output row (the schema documented in README.md, the dataset card):
   nces_id, name, state, sector, text, from_wikipedia (int8), wikipedia_title,
   wikidata_qid, wikipedia_revid, source, license
 
-Text policy: a matched school whose Wikipedia text is usable (>= --min-chars)
-gets that full article text, `from_wikipedia = 1`, license CC-BY-SA-4.0, and the
+Text policy: a matched school whose Wikipedia text is usable (>= --min-chars,
+and not an article about a closed school — see describes_closed_school) gets
+that full article text, `from_wikipedia = 1`, license CC-BY-SA-4.0, and the
 article URL as `source`. Every other school gets the generated NCES text,
 `from_wikipedia = 0`, license CC0-1.0, and `NCES CCD|PSS <year>` as `source`
 (wiki fields blank) — including matched schools whose article is missing or
@@ -40,6 +41,7 @@ import glob
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -126,8 +128,22 @@ def load_wiki_text(path):
     return out
 
 
+# Opening sentence in the past tense ("X was a public high school ...") means the
+# article describes a school that no longer operates; NCES lists only schools
+# operating in the reference year, so such a match is almost certainly a
+# same-named current school and the article must not supply its text.
+_OPENING_WAS = re.compile(r"^[^.]{0,200}?\b(was|were)\s+(a|an|the)\b", re.I)
+_OPENING_IS = re.compile(r"^[^.]{0,200}?\b(is|are)\s+(a|an|the)\b", re.I)
+
+
+def describes_closed_school(text):
+    """True when the article's first sentence says the school *was* something."""
+    first = (text or "")[:300]
+    return bool(_OPENING_WAS.search(first)) and not _OPENING_IS.search(first)
+
+
 def build_rows(generated, matches, wiki_text, min_chars, state):
-    rows, stats = [], {"no_text": 0, "short_text": 0}
+    rows, stats = [], {"no_text": 0, "short_text": 0, "closed_school": 0}
     for sid in sorted(generated):
         g = generated[sid]
         if state and g["state"] != state:
@@ -144,6 +160,8 @@ def build_rows(generated, matches, wiki_text, min_chars, state):
                 stats["no_text"] += 1
             elif len(w["text"]) < min_chars:
                 stats["short_text"] += 1
+            elif describes_closed_school(w["text"]):
+                stats["closed_school"] += 1
             else:
                 title = w.get("title") or m["title"]
                 row.update({
@@ -248,6 +266,7 @@ def main():
         "from_wikipedia_1": n_wiki,
         "from_wikipedia_0": n - n_wiki,
         "matched_without_usable_text": stats["no_text"] + stats["short_text"],
+        "matched_to_closed_school_article": stats["closed_school"],
         "text_chars": sum(len(r["text"]) for r in rows),
     }
     inputs = {"generated_articles": args.articles}
@@ -272,7 +291,8 @@ def main():
         f"  from_wikipedia=1 : {n_wiki:,} ({100 * n_wiki / n:.1f}%)\n"
         f"  from_wikipedia=0 : {n - n_wiki:,}\n"
         f"  matched but no usable Wikipedia text: {stats['no_text']:,} missing, "
-        f"{stats['short_text']:,} under {args.min_chars} chars (-> NCES text)\n"
+        f"{stats['short_text']:,} under {args.min_chars} chars, "
+        f"{stats['closed_school']:,} describe a closed school (-> NCES text)\n"
         f"  total text: {summary['text_chars'] / 1e6:.1f}M chars\n"
         f"  manifest -> {os.path.join(OUT_DIR, 'build_manifest.json')}\n"
         f"next: python validate_publish.py\n"

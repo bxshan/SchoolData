@@ -35,7 +35,7 @@ def test_missing_or_short_wikipedia_text_falls_back_to_nces():
         min_chars=200, state=None)
     assert [r["from_wikipedia"] for r in rows] == [0, 0]
     assert all(r["license"] == "CC0-1.0" and not r["wikipedia_title"] for r in rows)
-    assert stats == {"no_text": 1, "short_text": 1}
+    assert stats == {"no_text": 1, "short_text": 1, "closed_school": 0}
 
 
 def test_nces_source_names_sector_and_year():
@@ -47,3 +47,19 @@ def test_nces_source_names_sector_and_year():
 def test_state_slice_and_sorted_ids():
     rows, _ = p.build_rows({"3": gen(), "1": gen(state="CA"), "2": gen()}, {}, {}, 200, "AL")
     assert [r["nces_id"] for r in rows] == ["2", "3"]
+
+
+def test_article_about_a_closed_school_is_not_used():
+    closed = "Lincoln High School was a public high school in Talladega, Alabama. " * 5
+    rows, stats = p.build_rows(
+        {"1": gen()},
+        {"1": {"pageid": "7", "title": "Lincoln High School", "qid": "Q1", "url": ""}},
+        {"7": {"title": "Lincoln High School", "revid": 1, "text": closed}},
+        min_chars=200, state=None)
+    assert rows[0]["from_wikipedia"] == 0 and stats["closed_school"] == 1
+
+
+def test_describes_closed_school():
+    assert p.describes_closed_school("Blue School was a progressive school in NYC.")
+    assert not p.describes_closed_school("Troy High School is a public school. It was founded in 1920.")
+    assert not p.describes_closed_school("St. Mary's, which was a convent, is a Catholic school.")
