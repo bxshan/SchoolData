@@ -72,7 +72,8 @@ ENRICHED_FIELDS = ["title", "url", "pageid", "state", "level", "description",
                    "instance_of", "founded", "website", "school_district",
                    "nces_id", "postal_code", "wikidata_qid", "lat", "lon",
                    "pageviews_60d", "thumbnail", "source_category", "validation",
-                   "redirect_to"]
+                   "redirect_to", "country", "dissolved", "operating",
+                   "validation_note"]
 ACCREDITATION = re.compile(r"accredit|commission on|association of", re.I)
 
 
@@ -259,6 +260,8 @@ def resolve_and_enrich(session, rows, delay):
                 "source_category": sc,
                 "validation": val.get(orig, ""),
                 "redirect_to": "",
+                "country": "", "dissolved": "", "operating": "",
+                "validation_note": "",
             }
         sys.stderr.write(f"  resolved {min(i + 50, len(titles))}/{len(titles)} "
                          f"-> {len(out)} unique\n")
@@ -283,6 +286,17 @@ def _redirect_record(title, pageid, target, source_category):
         "redirect_to": target,
     })
     return rec
+
+
+def _claim_ids(claims, pid):
+    """Every entity id asserted for property `pid` (value snaks only)."""
+    out = []
+    for c in claims.get(pid, []):
+        snak = c.get("mainsnak", {})
+        v = snak.get("datavalue", {}).get("value") if snak.get("snaktype") == "value" else None
+        if isinstance(v, dict) and v.get("id"):
+            out.append(v["id"])
+    return out
 
 
 def _claim_value(claims, pid):
@@ -318,21 +332,23 @@ def enrich_wikidata(session, records, delay):
         }, base_url=WIKIDATA_API)
         for qid, ent in data.get("entities", {}).items():
             cl = ent.get("claims", {})
-            inst = _claim_value(cl, "P31")
+            inst_qs = _claim_ids(cl, "P31")
+            country_qs = _claim_ids(cl, "P17")
             dist = _claim_value(cl, "P5353")
             founded = _claim_value(cl, "P571")
             year = ""
             if isinstance(founded, dict) and founded.get("time"):
                 m = re.search(r"([+-]\d{4})", founded["time"])
                 year = m.group(1).lstrip("+") if m else ""
-            inst_q = inst.get("id") if isinstance(inst, dict) else None
             dist_q = dist.get("id") if isinstance(dist, dict) else None
-            if inst_q:
-                label_needed.add(inst_q)
+            label_needed.update(inst_qs + country_qs[:1])
             if dist_q:
                 label_needed.add(dist_q)
             raw[qid] = {
-                "instance_q": inst_q,
+                "instance_qs": inst_qs,
+                "country_q": country_qs[0] if country_qs else None,
+                "dissolved": any(c.get("mainsnak", {}).get("snaktype") == "value"
+                                 for c in cl.get("P576", [])),
                 "district_q": dist_q,
                 "founded": year,
                 "website": _claim_value(cl, "P856") or "",
@@ -358,12 +374,136 @@ def enrich_wikidata(session, records, delay):
 
     for qid, ex in raw.items():
         for rec in by_qid[qid]:
-            rec["instance_of"] = labels.get(ex["instance_q"], "") if ex["instance_q"] else ""
+            rec["instance_of"] = "|".join(l for l in (labels.get(q, "") for q in ex["instance_qs"]) if l)
+            rec["country"] = labels.get(ex["country_q"], "") if ex["country_q"] else ""
+            rec["dissolved"] = "1" if ex["dissolved"] else ""
             rec["school_district"] = labels.get(ex["district_q"], "") if ex["district_q"] else ""
             rec["founded"] = ex["founded"]
             rec["website"] = ex["website"] if isinstance(ex["website"], str) else ""
             rec["nces_id"] = ex["nces_id"] if isinstance(ex["nces_id"], str) else ""
             rec["postal_code"] = ex["postal_code"] if isinstance(ex["postal_code"], str) else ""
+
+
+# ---------------------------------------------------------------- revalidation
+# Post-enrichment checks on signals the crawl didn't have (Wikidata description,
+# all P31 types, country, dissolution, coordinates). Each change is recorded in
+# `validation_note`; nothing is dropped.
+
+USPS = {
+    "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California",
+    "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "DC": "District of Columbia",
+    "FL": "Florida", "GA": "Georgia", "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois",
+    "IN": "Indiana", "IA": "Iowa", "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana",
+    "ME": "Maine", "MD": "Maryland", "MA": "Massachusetts", "MI": "Michigan",
+    "MN": "Minnesota", "MS": "Mississippi", "MO": "Missouri", "MT": "Montana",
+    "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire", "NJ": "New Jersey",
+    "NM": "New Mexico", "NY": "New York", "NC": "North Carolina", "ND": "North Dakota",
+    "OH": "Ohio", "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania",
+    "RI": "Rhode Island", "SC": "South Carolina", "SD": "South Dakota", "TN": "Tennessee",
+    "TX": "Texas", "UT": "Utah", "VT": "Vermont", "VA": "Virginia", "WA": "Washington",
+    "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming", "PR": "Puerto Rico",
+    "GU": "Guam", "AS": "American Samoa", "MP": "Northern Mariana Islands",
+    "VI": "United States Virgin Islands",
+}
+US_COUNTRIES = {"united states", "united states of america", "puerto rico", "guam",
+                "american samoa", "northern mariana islands",
+                "united states virgin islands"}
+
+SCHOOLISH_DESC = re.compile(
+    r"\b(school|academy|yeshiva|montessori|lyceum|gymnasium)\b", re.I)
+HIGHER_ED = re.compile(
+    r"(?!.*(prep|k-12|k–12|high school))\b(university|college|seminary|"
+    r"theological|institute of technology)\b", re.I)
+# The description's head noun (within its first few words) is a network or
+# district — "Charter school network in Chicago" — as opposed to a school that
+# merely mentions its district ("Public high school in the X school district").
+NETWORK = re.compile(
+    r"^(?:\S+\s+){0,3}?(network|district|school system|organization|"
+    r"organisation|board of education|group of schools)\b", re.I)
+HISTORIC_P31 = re.compile(
+    r"school building|one-room school|rosenwald school|schoolhouse|former school",
+    re.I)
+FORMER_DESC = re.compile(r"\b(former|defunct|closed)\b", re.I)
+
+
+class NcesLocator:
+    """Nearest NCES school -> state, for articles whose text names no state.
+
+    Joins nces_crawl's school_coordinates.csv (NCES EDGE / PSS coordinates) to
+    the all-schools master for each school's state; an article within `max_km`
+    of an NCES school is taken to be in that school's state."""
+
+    def __init__(self, coords_path, master_path, max_km=25.0):
+        self.max_km, self.grid = max_km, {}
+        with open(master_path, newline="", encoding="utf-8") as fh:
+            state = {r["school_id"]: r["state"] for r in csv.DictReader(fh)}
+        with open(coords_path, newline="", encoding="utf-8") as fh:
+            for r in csv.DictReader(fh):
+                if not (r["lat"] and r["lon"] and r["school_id"] in state):
+                    continue
+                y, x = float(r["lat"]), float(r["lon"])
+                key = (int(y * 4), int(x * 4))                 # 0.25-degree cells
+                self.grid.setdefault(key, []).append((y, x, state[r["school_id"]]))
+
+    def state(self, lat, lon):
+        import math
+        cy, cx = int(lat * 4), int(lon * 4)
+        best, best_km = None, self.max_km
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                for y, x, st in self.grid.get((cy + dy, cx + dx), ()):
+                    km = 111.0 * math.hypot(y - lat, (x - lon) * math.cos(math.radians(lat)))
+                    if km < best_km:
+                        best, best_km = st, km
+        return USPS.get(best, "")
+
+
+def revalidate(records, locator=None):
+    """Fill missing states and re-examine tags; returns a Counter of changes."""
+    from collections import Counter
+    changes = Counter()
+    for rec in records.values():
+        desc, inst = rec.get("description", ""), rec.get("instance_of", "")
+        notes = []
+
+        # 1. state: Wikidata description ("school in Talladega, Alabama"), then coords
+        if not rec["state"]:
+            st = state_of(desc)
+            if not st and locator and rec.get("lat") not in ("", None):
+                st = locator.state(float(rec["lat"]), float(rec["lon"]))
+            if st:
+                rec["state"] = st
+                notes.append("state from " + ("description" if state_of(desc) else "coordinates"))
+                changes["state_filled"] += 1
+
+        # 2. operating: no when dissolved, a historic building type, or described as former
+        if rec["validation"] not in ("redirect",):
+            closed = (rec.get("dissolved") or HISTORIC_P31.search(inst)
+                      or FORMER_DESC.search(desc) or rec["validation"] == "defunct")
+            rec["operating"] = "no" if closed else "yes"
+
+        # 3. validation fixes
+        v = rec["validation"]
+        country = (rec.get("country") or "").lower()
+        if v in ("school", "unverified") and country and country not in US_COUNTRIES \
+                and not rec["state"]:
+            rec["validation"] = "out_of_scope"
+            notes.append(f"foreign ({rec['country']})")
+        elif v == "school" and (HIGHER_ED.search(desc) or HIGHER_ED.search(inst)) \
+                and not SCHOOLISH_DESC.search(desc.replace("college prep", "")):
+            rec["validation"] = "out_of_scope"
+            notes.append("higher education")
+        elif v == "school" and NETWORK.search(desc):
+            rec["validation"] = "out_of_scope"
+            notes.append("network/district: " + NETWORK.search(desc).group(0))
+        elif v == "unverified" and rec["wikidata_qid"] and SCHOOLISH_DESC.search(desc) \
+                and not NETWORK.search(desc) and not HIGHER_ED.search(desc):
+            rec["validation"] = "school"
+            notes.append("rescued: description names a school")
+        if rec["validation"] != v:
+            changes[f"{v}->{rec['validation']}"] += 1
+        rec["validation_note"] = "; ".join(notes)
+    return changes
 
 
 # Intermediates live in output/ (a sibling of the scripts). Bare --in/--out names
@@ -383,6 +523,10 @@ def main():
     ap.add_argument("--proxy", default=None)
     ap.add_argument("--exclude-accreditation", action="store_true",
                     help="drop rows whose source category is an accreditor/association")
+    nces_out = os.path.join(os.path.dirname(__file__), "..", "nces_crawl", "output_all_schools")
+    ap.add_argument("--nces-coords", default=os.path.join(nces_out, "school_coordinates.csv"),
+                    help="NCES school coordinates used to infer a missing state; '' disables")
+    ap.add_argument("--nces-master", default=os.path.join(nces_out, "all_schools_master.csv"))
     ap.add_argument("--no-wikidata", action="store_true",
                     help="skip the Wikidata pass (type/founded/website/district/NCES/postal)")
     args = ap.parse_args()
@@ -405,6 +549,10 @@ def main():
     records = resolve_and_enrich(session, rows, args.delay)
     if not args.no_wikidata:
         enrich_wikidata(session, records, args.delay)
+    locator = (NcesLocator(args.nces_coords, args.nces_master)
+               if args.nces_coords and os.path.exists(args.nces_coords) else None)
+    changes = revalidate(records, locator)
+    sys.stderr.write(f"revalidated: {dict(changes)}\n")
 
     fields = ENRICHED_FIELDS
     with open(args.out, "w", newline="", encoding="utf-8") as fh:

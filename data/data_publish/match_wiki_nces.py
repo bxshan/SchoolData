@@ -40,6 +40,7 @@ Usage:
 
 import argparse
 import csv
+import math
 import os
 import re
 import sys
@@ -252,8 +253,9 @@ def significant_tokens(norm):
     return {t for t in norm.split() if len(t) >= 4}
 
 
-def load_nces(path):
-    """Return (by_id, by_state) where by_state[code] = list of record dicts."""
+def load_nces(path, coords=None):
+    """Return (by_id, by_state) where by_state[code] = list of record dicts.
+    `coords` (NCES id -> (lat, lon)) adds lat/lon for the geo tier."""
     by_id = {}
     by_state = defaultdict(list)
     with open(path, newline="", encoding="utf-8", errors="replace") as f:
@@ -272,6 +274,7 @@ def load_nces(path):
             rec["core"] = core_name(rec["norm"])
             rec["levels"] = school_levels(rec["norm"])
             rec["grade_levels"] = grade_levels(r)
+            rec["lat"], rec["lon"] = (coords or {}).get(sid, (None, None))
             rec["tokens"] = significant_tokens(rec["core"])
             if sid:
                 by_id[sid] = rec
@@ -316,6 +319,7 @@ HERE = os.path.dirname(__file__)
 OUT_DIR = os.path.join(HERE, "output")
 DEFAULT_WIKI = os.path.join(HERE, "..", "wiki_crawl", "output", "schools_enriched.csv")
 DEFAULT_NCES = os.path.join(HERE, "..", "nces_crawl", "output_all_schools", "all_schools_master.csv")
+DEFAULT_COORDS = os.path.join(HERE, "..", "nces_crawl", "output_all_schools", "school_coordinates.csv")
 
 
 def _out(name):
@@ -323,7 +327,7 @@ def _out(name):
 
 
 # Stronger tiers win when several Wikipedia articles land on one NCES school.
-METHOD_RANK = {"nces_id": 0, "name_state": 1, "fuzzy": 2}
+METHOD_RANK = {"nces_id": 0, "nces_id_stale": 1, "name_state": 2, "fuzzy": 3, "geo": 4}
 
 
 def parse_statuses(s):
@@ -332,12 +336,24 @@ def parse_statuses(s):
     return None if not toks or "all" in toks else toks
 
 
-def match_one(w, by_id, by_state, token_idx, threshold, stats):
+def match_one(w, by_id, by_state, token_idx, threshold, stats, geo=None):
     """Best (nces_record, method, score) for one Wikipedia row, or None."""
     nid = (w.get("nces_id") or "").strip()
     # tier 1: exact NCES id
     if nid and nid in by_id:
         return by_id[nid], "nces_id", 100.0
+    # tier 1b: stale NCES id — Wikidata still carries an id NCES has since
+    # re-issued (typically a district reorganization changes the 7-digit LEA
+    # prefix but keeps the state and 5-digit school number). Accept a same-state,
+    # same-school-number record whose name core agrees.
+    if nid and len(nid) == 12 and nid.isdigit():
+        wcore = core_name(norm_name(w["title"]))
+        for r in by_state.get(state_code(w["state"]) or "", ()):
+            sid = r["school_id"]
+            if (len(sid) == 12 and sid[:2] == nid[:2] and sid[-5:] == nid[-5:]
+                    and wcore and fuzz.token_sort_ratio(wcore, r["core"]) >= 80):
+                stats["stale_id_recovered"] += 1
+                return r, "nces_id_stale", 100.0
 
     code = state_code(w["state"])
     wnorm = norm_name(w["title"])
@@ -364,8 +380,15 @@ def match_one(w, by_id, by_state, token_idx, threshold, stats):
                 stats["name_state_ambiguous"] += 1
             return best, "name_state", 100.0
 
-    # tier 3: fuzzy on the DISTINCTIVE name core within the same state.
     wcore = core_name(wnorm)
+    hit = _fuzzy(w, wnorm, wcore, wcity, wexplicit, code, cands, token_idx, threshold)
+    if hit is None and geo is not None:
+        hit = _geo(w, wnorm, wcore, wexplicit, geo)
+    return hit
+
+
+def _fuzzy(w, wnorm, wcore, wcity, wexplicit, code, cands, token_idx, threshold):
+    """tier 3: fuzzy on the DISTINCTIVE name core within the same state."""
     if not cands or len(wcore.replace(" ", "")) < 4:   # skip too-generic cores
         return None
     seen, pool = set(), []
@@ -403,6 +426,67 @@ def match_one(w, by_id, by_state, token_idx, threshold, stats):
     return None
 
 
+class GeoIndex:
+    """NCES schools on a 0.01-degree grid (~1 km) for nearest-school lookups."""
+
+    def __init__(self, records):
+        self.grid = defaultdict(list)
+        for r in records:
+            if r.get("lat") is not None:
+                self.grid[(int(r["lat"] * 100), int(r["lon"] * 100))].append(r)
+
+    def near(self, lat, lon, max_km):
+        cy, cx, reach = int(lat * 100), int(lon * 100), int(max_km) + 1
+        out = []
+        for dy in range(-reach, reach + 1):
+            for dx in range(-reach, reach + 1):
+                for r in self.grid.get((cy + dy, cx + dx), ()):
+                    km = 111.0 * math.hypot(r["lat"] - lat,
+                                            (r["lon"] - lon) * math.cos(math.radians(lat)))
+                    if km <= max_km:
+                        out.append((km, r))
+        return sorted(out, key=lambda t: t[0])
+
+
+GEO_MAX_KM = 1.0
+
+
+def _geo(w, wnorm, wcore, wexplicit, geo):
+    """tier 4: the nearest NCES school within GEO_MAX_KM of the article's
+    coordinates that shares a distinctive name token — geography disambiguates
+    names too different for the fuzzy tier (informal titles, former names)."""
+    try:
+        lat, lon = float(w.get("lat") or ""), float(w.get("lon") or "")
+    except ValueError:
+        return None
+    wtoks = significant_tokens(wcore)
+    if not wtoks:
+        return None
+    wlevels = wiki_levels(w, wnorm, use_categories=True)
+    for km, r in geo.near(lat, lon, GEO_MAX_KM):
+        if (wtoks & r["tokens"] and city_compatible(wexplicit, r["city"])
+                and levels_compatible(wlevels, r)):
+            return r, "geo", round(100.0 * (1 - km / GEO_MAX_KM), 1)
+    return None
+
+
+def load_coords(path):
+    """NCES id -> (lat, lon) from nces_crawl's school_coordinates.csv (NCES EDGE
+    for public schools, the PSS public-use file for private ones)."""
+    with open(path, newline="", encoding="utf-8") as fh:
+        return {r["school_id"]: (float(r["lat"]), float(r["lon"]))
+                for r in csv.DictReader(fh) if r["lat"] and r["lon"]}
+
+
+def unmatched_reason(w):
+    """Why a kept Wikipedia school has no NCES match (for wiki_unmatched.csv)."""
+    if w.get("operating") == "no":
+        return "not_operating"          # closed/historic: NCES lists current schools
+    if not state_code(w.get("state", "")):
+        return "no_state"               # can only match by id or coordinates
+    return "no_nces_record_or_variant_name"
+
+
 def _pageviews(w):
     try:
         return int(float(w.get("pageviews_60d") or 0))
@@ -417,6 +501,11 @@ def main():
     ap.add_argument("--out", default="wiki_nces_matches.csv")
     ap.add_argument("--threshold", type=float, default=88.0,
                     help="min fuzzy score (0-100) to accept a name match (default 88)")
+    ap.add_argument("--nces-coords", default=DEFAULT_COORDS,
+                    help="NCES coordinates (school_coordinates.csv) for the geo tier; "
+                         "'' disables it")
+    ap.add_argument("--unmatched", default="wiki_unmatched.csv",
+                    help="where to write kept Wikipedia schools with no match")
     ap.add_argument("--statuses", default="school",
                     help="comma list of crawl `validation` tags to match "
                          "(default: school; 'all' disables the filter)")
@@ -428,8 +517,12 @@ def main():
     statuses = parse_statuses(args.statuses)
 
     sys.stderr.write(f"fuzzy backend: {_BACKEND}\n")
-    by_id, by_state = load_nces(args.nces)
+    coords = load_coords(args.nces_coords) if args.nces_coords and os.path.exists(args.nces_coords) else {}
+    by_id, by_state = load_nces(args.nces, coords)
     token_idx = {st: build_token_index(recs) for st, recs in by_state.items()}
+    geo = GeoIndex(by_id.values()) if coords else None
+    sys.stderr.write(f"geo tier: {'on' if geo else 'off'} "
+                     f"({sum(r['lat'] is not None for r in by_id.values()):,} NCES schools with coordinates)\n")
     n_nces = sum(len(v) for v in by_state.values())
     sys.stderr.write(f"loaded NCES: {n_nces:,} schools in {len(by_state)} states\n")
 
@@ -451,11 +544,12 @@ def main():
 
     stats = defaultdict(int)
     # nces school_id -> (rank key, wiki row, nces record, method, score)
-    claims = {}
+    claims, unmatched = {}, []
     for w in wiki:
-        hit = match_one(w, by_id, by_state, token_idx, args.threshold, stats)
+        hit = match_one(w, by_id, by_state, token_idx, args.threshold, stats, geo)
         if hit is None:
             stats["unmatched"] += 1
+            unmatched.append(w)
             continue
         rec, method, score = hit
         key = (METHOD_RANK[method], -score, -_pageviews(w))
@@ -474,6 +568,22 @@ def main():
         wr.writeheader()
         wr.writerows(matches)
 
+    # Kept Wikipedia schools with no NCES match, labeled with the likely reason.
+    matched_pages = {m["wiki_pageid"] for m in matches}
+    reasons = defaultdict(int)
+    with open(_out(args.unmatched), "w", newline="", encoding="utf-8") as f:
+        wr = csv.DictWriter(f, fieldnames=["title", "pageid", "url", "state", "level",
+                                           "wikidata_qid", "nces_id", "operating",
+                                           "description", "reason"],
+                            extrasaction="ignore")
+        wr.writeheader()
+        for w in wiki:
+            if w["pageid"] in matched_pages:
+                continue
+            reason = "lost_nces_conflict" if w not in unmatched else unmatched_reason(w)
+            reasons[reason] += 1
+            wr.writerow({**w, "reason": reason})
+
     # summary
     by_sector = defaultdict(int)
     for m in matches:
@@ -486,10 +596,13 @@ def main():
         f"    by name+state : {stats['name_state']:,}  "
         f"(ambiguous: {stats['name_state_ambiguous']:,}; "
         f"candidates rejected on city/level: {stats['name_state_rejected']:,})\n"
+        f"    by stale id   : {stats['nces_id_stale']:,}\n"
         f"    by fuzzy      : {stats['fuzzy']:,}  (>= {args.threshold:g})\n"
+        f"    by geo        : {stats['geo']:,}  (<= {GEO_MAX_KM:g} km + shared name token)\n"
         f"  nces_conflict : {stats['nces_conflict']:,}  "
         f"(article dropped: its NCES school was claimed by a stronger match)\n"
-        f"  unmatched     : {stats['unmatched']:,}\n"
+        f"  unmatched     : {stats['unmatched']:,}  -> {_out(args.unmatched)}\n"
+        f"    by reason   : {dict(reasons)}\n"
         f"  matched NCES by sector: public={by_sector['public']:,} private={by_sector['private']:,}\n"
         f"  distinct NCES schools covered: {len(matches):,} / {n_nces:,} "
         f"({100*len(matches)/n_nces:.2f}%)\n"

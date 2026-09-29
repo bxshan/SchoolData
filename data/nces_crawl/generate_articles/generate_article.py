@@ -30,10 +30,9 @@ HERE = os.path.dirname(__file__)
 MASTER = os.path.join(HERE, "..", "output_all_schools",
                       "all_schools_master.csv")
 
-# Data vintage of each sector's NCES download, used in "As of the <year> school
-# year" (the enrollment/staffing year). Public = CCD search export (membership
-# and staff 2024-25; directory 2025-26), private = PSS 2023-24. Update when
-# re-downloading a newer release (see the `title` field of the NCES Excel form).
+# Data vintage of each sector's NCES data, used in "As of the <year> school
+# year". Public = CCD bulk files (build_from_bulk.py YEAR), private = PSS.
+# Update together with build_from_bulk.py when moving to a newer release.
 DATA_YEAR = {"public": "2024-25", "private": "2023-24"}
 
 STATE_NAMES = {

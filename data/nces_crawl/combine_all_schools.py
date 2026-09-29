@@ -1,23 +1,24 @@
 # Author: Boxuan Shan + support from Claude Opus 4.8
 #!/usr/bin/env python3
 """
-Combine downloaded NCES public AND private school files into a single
-unified master CSV covering all K-12 schools in the US.
+Combine the public and private NCES masters into a single unified master CSV
+covering all K-12 schools in the US.
 
-The downloaded .xls files are actually HTML tables with a 5-6 row banner/notes
-preamble before the real header row. This script:
-  1. Parses each file (stdlib HTML parser - no lxml/pandas required),
-  2. Strips the preamble and promotes the real header row,
-  3. Maps the shared fields of both sectors to a normalized common core,
-  4. Preserves every remaining (sector-specific) column losslessly,
-  5. Tags each row with a `sector` column and writes one master CSV.
+Reads output_public_schools/public_schools_master.csv (from build_from_bulk.py,
+or the search-tool scrape) and output_private_schools/private_schools_master.csv
+(from download_schools.py --type private), then:
+  1. Maps the shared fields of both sectors to a normalized common core,
+  2. Preserves every remaining (sector-specific) column losslessly,
+  3. Tags each row with a `sector` column and writes one master CSV.
+
+parse_school_file() also lives here: the search tool's downloaded .xls files are
+HTML tables with a banner/notes preamble, parsed with the stdlib HTML parser.
 
 Usage:
     python combine_all_schools.py
 """
 
 import csv
-import glob
 import logging
 from html.parser import HTMLParser
 from pathlib import Path
@@ -28,8 +29,8 @@ logger = logging.getLogger(__name__)
 # Where the per-state .xls files live and where to write the unified output —
 # resolved next to this script, so it runs from any working directory.
 HERE = Path(__file__).resolve().parent
-PUBLIC_DOWNLOAD_DIR = HERE / "public_school_downloads"
-PRIVATE_DOWNLOAD_DIR = HERE / "private_school_downloads"
+PUBLIC_MASTER = HERE / "output_public_schools" / "public_schools_master.csv"
+PRIVATE_MASTER = HERE / "output_private_schools" / "private_schools_master.csv"
 OUTPUT_DIR = HERE / "output_all_schools"
 OUTPUT_FILE = "all_schools_master.csv"
 
@@ -157,33 +158,23 @@ def _normalize(records, header, core_map, sector, source_file):
     return out, extras
 
 
-def _load_sector(download_dir, id_marker, core_map, sector):
-    """Parse and normalize every .xls in a sector's download directory."""
-    files = sorted(glob.glob(str(download_dir / "*.xls")))
-    logger.info("%s: found %d files in %s", sector.upper(), len(files), download_dir)
-    rows, extras_order = [], []
-    for fp in files:
-        path = Path(fp)
-        header, records = parse_school_file(path, id_marker)
-        if not records:
-            logger.warning("  %s: 0 schools", path.name)
-            continue
-        norm, extras = _normalize(records, header, core_map, sector, path.stem)
-        if not extras_order:
-            extras_order = extras
-        rows.extend(norm)
-        logger.info("  %s: %d schools", path.name, len(records))
-    return rows, extras_order
+def _load_sector(master, core_map, sector):
+    """Read and normalize one sector's master CSV."""
+    if not master.exists():
+        logger.warning("%s: %s not found", sector.upper(), master)
+        return [], []
+    with open(master, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        records = [r for r in reader if (r.get(reader.fieldnames[0]) or "").strip()]
+    rows, extras = _normalize(records, reader.fieldnames, core_map, sector, master.stem)
+    logger.info("%s: %d schools from %s", sector.upper(), len(rows), master.name)
+    return rows, extras
 
 
 def build_unified(output_dir=OUTPUT_DIR, output_file=OUTPUT_FILE):
     """Build the unified all-K-12-schools master CSV from downloaded files."""
-    public_rows, public_extras = _load_sector(
-        PUBLIC_DOWNLOAD_DIR, "NCES School ID", PUBLIC_CORE_MAP, "public"
-    )
-    private_rows, private_extras = _load_sector(
-        PRIVATE_DOWNLOAD_DIR, "PSS_SCHOOL_ID", PRIVATE_CORE_MAP, "private"
-    )
+    public_rows, public_extras = _load_sector(PUBLIC_MASTER, PUBLIC_CORE_MAP, "public")
+    private_rows, private_extras = _load_sector(PRIVATE_MASTER, PRIVATE_CORE_MAP, "private")
 
     if not public_rows and not private_rows:
         logger.error("No school data found in either download directory.")
