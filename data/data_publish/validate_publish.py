@@ -147,6 +147,12 @@ def main():
         g.check(f"per state: row counts within ±{args.max_state_delta:.0%} of baseline",
                 not bad, f"{len(base):,} -> {len(rows):,} rows", bad)
 
+    card_path = os.path.join(args.dist, "README.md")
+    card = open(card_path, encoding="utf-8").read() if os.path.exists(card_path) else ""
+    g.check("card: rendered with this build's numbers",
+            card.startswith("---") and "@@" not in card and f"{len(rows):,}" in card,
+            card_path)
+
     n_wiki = len(wiki)
     print(f"\n  from_wikipedia=1: {n_wiki:,} ({100 * n_wiki / max(len(rows), 1):.1f}%)  "
           f"text: {sum(len(r['text']) for r in rows) / 1e6:.1f}M chars")

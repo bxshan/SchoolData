@@ -24,8 +24,9 @@ article URL as `source`. Every other school gets the generated NCES text,
 too short.
 
 Writes the upload-ready tree to output/dist/ (Parquet shards under
-data/articles/, articles.jsonl, and README.md / CHANGELOG.md / LICENSE copied from
-this directory) plus output/build_manifest.json, which records the git commit and
+data/articles/, articles.jsonl, and CHANGELOG.md / LICENSE copied from this
+directory, and README.md — the dataset card — rendered from this directory's
+template with the build's own numbers) plus output/build_manifest.json, which records the git commit and
 the sha256 of every input so a release can be traced and rebuilt.
 
 Usage:
@@ -56,7 +57,7 @@ DEFAULT_WIKI_TEXT = os.path.join(HERE, "..", "wiki_crawl", "output", "wiki_artic
 CARD_FILES = ("README.md", "CHANGELOG.md", "LICENSE")
 
 sys.path.insert(0, os.path.join(HERE, "..", "nces_crawl", "generate_articles"))
-from generate_article import DATA_YEAR  # noqa: E402  (data vintage per sector)
+from generate_article import DATA_YEAR, STATE_NAMES  # noqa: E402
 
 FIELDS = ["nces_id", "name", "state", "sector", "text", "from_wikipedia",
           "wikipedia_title", "wikidata_qid", "wikipedia_revid", "source", "license"]
@@ -106,7 +107,8 @@ def load_matches(path):
             sid = (r.get("nces_school_id") or "").strip()
             if sid:
                 out[sid] = {"pageid": r["wiki_pageid"], "title": r["wiki_title"],
-                            "qid": r["wiki_wikidata_qid"], "url": r["wiki_url"]}
+                            "qid": r["wiki_wikidata_qid"], "url": r["wiki_url"],
+                            "method": r.get("match_method", "")}
     sys.stderr.write(f"wiki matches: {len(out):,} schools\n")
     return out
 
@@ -173,6 +175,67 @@ def build_rows(generated, matches, wiki_text, min_chars, state):
                 })
         rows.append(row)
     return rows, stats
+
+
+def card_values(rows, matches, wiki_text, stats):
+    """Numbers for the dataset card template (README.md @@tokens@@)."""
+    import statistics
+    n = len(rows)
+    wiki = [r for r in rows if r["from_wikipedia"] == 1]
+    ids = {r["nces_id"] for r in rows}
+    methods = {}
+    for sid, m in matches.items():
+        if sid in ids:
+            methods[m["method"]] = methods.get(m["method"], 0) + 1
+    per_state = {}
+    for r in rows:
+        t = per_state.setdefault(r["state"], [0, 0])
+        t[0] += 1
+        t[1] += r["from_wikipedia"]
+    cov = sorted((w / t, st) for st, (t, w) in per_state.items() if t >= 100)
+
+    def fmt(items):
+        names = [f"{100 * c:.1f}% ({STATE_NAMES.get(st, st).removeprefix('the ')})"
+                 for c, st in items]
+        return ", ".join(names[:-1]) + " and " + names[-1] if len(names) > 1 else "".join(names)
+
+    used = {r["wikipedia_title"] for r in wiki}
+    dates = sorted((w.get("fetched_at") or "")[:10] for w in wiki_text.values()
+                   if w.get("title") in used and w.get("fetched_at"))
+    fetched = (dates[0] if dates and dates[0] == dates[-1]
+               else f"{dates[0]} to {dates[-1]}" if dates else "n/a")
+    pct = lambda k: f"{100 * k / max(n, 1):.1f}"                       # noqa: E731
+    return {
+        "rows": f"{n:,}", "wiki_n": f"{len(wiki):,}", "wiki_pct": pct(len(wiki)),
+        "nces_n": f"{n - len(wiki):,}", "nces_pct": pct(n - len(wiki)),
+        "matched_pct": pct(sum(methods.values())),
+        "public": f"{sum(r['sector'] == 'public' for r in rows):,}",
+        "private": f"{sum(r['sector'] == 'private' for r in rows):,}",
+        "states": str(len(per_state)),
+        "text_m": f"{sum(len(r['text']) for r in rows) / 1e6:.1f}",
+        "ccd_year": DATA_YEAR["public"], "pss_year": DATA_YEAR["private"],
+        "fetched": fetched,
+        "coverage_low": fmt(cov[:3]) if cov else "n/a",
+        "coverage_high": fmt(cov[-2:]) if cov else "n/a",
+        **{f"m_{k}": f"{methods.get(k, 0):,}"
+           for k in ("nces_id", "nces_id_stale", "name_state", "fuzzy", "geo")},
+        "closed_n": f"{stats['closed_school']:,}",
+        "notext_n": f"{stats['no_text'] + stats['short_text']:,}",
+        "median_wiki": f"{statistics.median(len(r['text']) for r in wiki):,.0f}" if wiki else "n/a",
+        "median_nces": f"{statistics.median(len(r['text']) for r in rows if not r['from_wikipedia']):,.0f}",
+    }
+
+
+def render_card(template_path, values):
+    """Fill README.md's @@token@@ placeholders; drop the template comment."""
+    text = open(template_path, encoding="utf-8").read()
+    text = re.sub(r"<!-- Template:.*?-->\n", "", text, flags=re.S)
+    for k, v in values.items():
+        text = text.replace(f"@@{k}@@", v)
+    left = sorted(set(re.findall(r"@@(\w+)@@", text)))
+    if left:
+        sys.exit(f"README.md has unfilled tokens: {left}")
+    return text
 
 
 def write_jsonl(path, rows):
@@ -254,7 +317,13 @@ def main():
                                   args.shards)
     write_jsonl(os.path.join(args.dist, "articles.jsonl"), rows)
     for name in CARD_FILES:
-        shutil.copy(os.path.join(HERE, name), os.path.join(args.dist, name))
+        if name == "README.md":
+            card = render_card(os.path.join(HERE, name),
+                               card_values(rows, matches, wiki_text, stats))
+            with open(os.path.join(args.dist, name), "w", encoding="utf-8") as fh:
+                fh.write(card)
+        else:
+            shutil.copy(os.path.join(HERE, name), os.path.join(args.dist, name))
 
     n = len(rows)
     n_wiki = sum(r["from_wikipedia"] for r in rows)
