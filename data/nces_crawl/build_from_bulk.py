@@ -126,9 +126,19 @@ def _num(v):
 
 
 def build_public():
-    members = {r["NCESSCH"]: r["STUDENT_COUNT"]
-               for r in _zip_reader(FILES["membership"])
-               if r["TOTAL_INDICATOR"] == "Education Unit Total"}
+    # K-12 enrollment = the school total minus adult-education students (the
+    # "Education Unit Total" includes them; the CCD search tool's Students
+    # column, and this dataset, do not).
+    total, adult = {}, {}
+    for r in _zip_reader(FILES["membership"]):
+        if r["TOTAL_INDICATOR"] == "Education Unit Total":
+            total[r["NCESSCH"]] = r["STUDENT_COUNT"]
+        elif r["TOTAL_INDICATOR"].startswith("Subtotal 4") and r["GRADE"] == "Adult Education":
+            adult[r["NCESSCH"]] = r["STUDENT_COUNT"]
+    members = {}
+    for sid, t in total.items():
+        n, a = _num(t), _num(adult.get(sid))
+        members[sid] = str(int(float(n) - float(a))) if n and a else n
     teachers = {r["NCESSCH"]: r["TEACHERS"] for r in _zip_reader(FILES["staff"])
                 if r["TOTAL_INDICATOR"] == "Education Unit Total"}
     lunch = defaultdict(dict)
@@ -151,7 +161,7 @@ def build_public():
         sid, g = d["NCESSCH"], edge.get(d["NCESSCH"], {})
         students, fte = _num(members.get(sid)), _num(teachers.get(sid))
         ratio = (f"{float(students) / float(fte):.2f}"
-                 if students and fte and float(fte) > 0 else "")
+                 if students and fte and float(students) > 0 and float(fte) > 0 else "")
         locale = (g.get("LOCALE") or "").strip()
         charter = d["CHARTER_TEXT"] if d["CHARTER_TEXT"] in ("Yes", "No") else ""
         rows.append({
