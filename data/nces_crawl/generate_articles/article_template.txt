@@ -1,46 +1,70 @@
 Wikipedia-style stub template for a US K-12 school — deterministic fill from NCES.
 
-Output is plain encyclopedic prose (no wiki markup, no invented facts). Every
-[bracketed] part is optional: the article stays grammatical for ANY subset of the
-fields below — each clause appears only when its data exists, the lead is assembled
-from whatever descriptors are present, and a final whitespace pass removes any
-double spaces or dangling commas left by dropped parts. (Verified exhaustively over
-all field combinations.)
+Rendered by generate_article.py from one row of the 85-column NCES master
+(../output_all_schools/all_schools_master.csv). Output is plain encyclopedic
+prose (no wiki markup, no invented facts). Every [bracketed] part is optional:
+each clause appears only when its data exists, and a final whitespace pass
+removes any double spaces or dangling commas left by dropped parts.
 
+PUBLIC (sector = public, NCES CCD)
 ----------------------------------------------------------------------------------
-{Name} is a {type} [{level} ]school[ in [{City}, ]{State}|{City}][, serving grades {GL}–{GH}].
+{Name} is a public [charter ][{type} ][{level} ]school[ in {City}, {County}, {State}][, serving grades {GL}–{GH}].
 [It is part of {District}.]
-[As of the {Year} school year, the school [enrolled {Enrollment} students][ and ]
-[employed about {Teachers} full-time teachers[, a student–teacher ratio of roughly {Ratio}:1]].]
+[It is located in {Locale}.]
+[In federal records it is listed with a status of "{Status}".]
+[As of the {Year} school year, it enrolled {Enrollment} students
+ [and employed about {Teachers} teachers, a student–teacher ratio of roughly {Ratio}:1].]
+[About {Lunch}% of students were eligible for free or reduced-price lunch.]
+[Its street address is {Address}, {City}, {ST}[ {ZIP}][, and its phone number is {Phone}].]
 ----------------------------------------------------------------------------------
 
-Degradation rules (any field may be missing, in any combination):
-  - {Name} missing      -> "This school" is used as the subject.
-  - {type}              -> always present: "public" (12-digit NCES id) or "private".
-  - {level} missing     -> dropped:  "... is a public school ...".
-  - location            -> "in City, State" / "in State" / "in City" / nothing.
-  - {GL}/{GH}           -> grades clause shown only when BOTH are present.
-  - {District} missing  -> district sentence omitted (also omitted when the
-                           district name equals the school's, e.g. charter self-LEAs).
-  - size sentence       -> shown if enrollment AND/OR teachers exist; the ratio
-                           clause needs both; the whole sentence is dropped if neither.
+PRIVATE (sector = private, NCES PSS)
+----------------------------------------------------------------------------------
+{Name} is a [{coed} ][{religion} ]private [{type} ][{level} ]school[ in {City}, {County}, {State}][, serving grades {GL}–{GH}].
+[It is located in {Locale}.]
+[As of the {Year} school year, it enrolled {Enrollment} students
+ [and employed about {Teachers} teachers, a student–teacher ratio of roughly {Ratio}:1].]
+[Its student body was {pct}% {race}, ... (descending, non-zero only).]
+[The school [has / does not have a library][ and ][is in session about {Days} days a year[, {Hours} hours a day]].]
+[It reports affiliation with {Assoc1}, ..., and {AssocN}.]
+[Its street address is {Address}, {City}, {ST}[ {ZIP}].]
+----------------------------------------------------------------------------------
 
-Field mapping (schools.json / NCES):
-  Name        = n
-  type        = "public" (+ "charter" if ch=="Yes", + "magnet" if mg=="Yes")
-  level       = lv -> "elementary " | "middle " | "high " | "" (combined/other)
-  City        = ci
-  State       = full state name expanded from the 2-letter code s
-  GL, GH      = gl, gh   (grade-offered codes: PK, K, 1..12)
-  District    = d  (rendered as "the <name> school district" unless it already
-                    names a district/ISD/unified system)
-  Enrollment  = e
-  Teachers    = tf (full-time-equivalent)
-  Ratio       = round(e / tf, 1)
-  Year        = data vintage (CCD pull year), a CLI argument
+Field mapping (master column -> token):
+  Name        = school_name (ALL-CAPS titled, known acronyms kept)
+  City/County = city / county (" County" appended when missing)
+  State       = state (2-letter) expanded to the full name; ST = the raw code
+  GL, GH      = public: low_grade/high_grade (PK, KG->K, 01..12 -> 1..12)
+                private: first/last grade with non-zero PSS_ENROLL_<grade>
+  Enrollment  = total_students      Teachers = teachers (FTE)
+  Ratio       = student_teacher_ratio, else round(Enrollment / Teachers, 1)
+  Year        = DATA_YEAR[sector] in generate_article.py, or --year
+  public only:
+    charter   = Charter == "Yes"
+    type      = type: Other/Alternative -> alternative, Special Education ->
+                special-education, Vocational -> vocational (Regular -> nothing)
+    level     = derived from GL/GH: elementary / middle / high (else nothing)
+    District  = District (legal "in the county of ..." tail trimmed; rendered as
+                "the <name> school district" unless it already names one; omitted
+                when it repeats the school name)
+    Locale    = Locale label, e.g. "Town, Distant" -> "a distant town"
+    Status    = Status, shown only when not "Open"
+    Lunch     = round((Free Lunch + Reduced Lunch) / total_students * 100)
+    Phone     = phone
+  private only:
+    coed      = PSS_COED: coeducational / all-boys / all-girls
+    religion  = PSS_RELIG: Catholic / religiously affiliated / nonsectarian
+    type      = PSS_TYPE: Montessori, special-program, special-education,
+                career and technical, alternative, early-childhood (1 = regular)
+    level     = PSS_LEVEL: elementary / secondary (combined -> nothing)
+    Locale    = PSS_LOCALE 12-category code (11..43)
+    race      = PSS_*_PCT columns
+    library   = PSS_LIBRARY (Yes/No)   Days/Hours = PSS_SCH_DAYS / PSS_STU_DAY_HRS
+    Assoc     = PSS_ASSOC_1..15 (deduped, sorted)
 
 Rules:
-  - Never invent a value; omit any clause whose token is empty.
+  - Never invent a value; omit any clause whose data is empty.
+  - Codes that cannot be decoded confidently (PSS_ORIENT denomination,
+    PSS_COMM_TYPE) are omitted rather than guessed.
   - Deterministic: identical input -> identical output (no randomness, no model).
-  - Private (PSS) schools lack ph/tf/gl/gh/ch/mg; the size clause degrades to
-    enrollment only, and "public" is dropped for non-public sectors.
+  - {Name} missing -> "This school" is the subject.

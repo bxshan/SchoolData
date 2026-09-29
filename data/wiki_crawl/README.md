@@ -26,11 +26,13 @@ python crawl_k12_schools.py
 #    Emit only verified schools directly (CSV-safe):
 python crawl_k12_schools.py --out schools_clean.csv --write-status school
 
-# 2. Enrich → adds state, level, Wikidata QID, lat/lon.
+# 2. Enrich → adds state, level, Wikidata QID, lat/lon (keeps `validation`).
 python enrich_schools.py
 
 # 3. Match against NCES → ../data_publish/ (writes there, not here).
+#    Only `validation == school` rows are matched by default.
 python ../data_publish/match_wiki_nces.py
+python ../data_publish/match_wiki_nces.py --statuses school,unverified
 ```
 
 Crawl/enrich read and write in this `output/` by default (a bare `--in`/`--out`
@@ -46,7 +48,7 @@ All scripts accept `--proxy http://127.0.0.1:7890` for a local proxy.
 | File | Produced by | Contents |
 |---|---|---|
 | `schools.csv` | `crawl_k12_schools.py` | ~23k rows, each tagged in `validation` |
-| `schools_enriched.csv` | `enrich_schools.py` | resolved + state/level/QID/coords |
+| `schools_enriched.csv` | `enrich_schools.py` | resolved + state/level/QID/coords + `validation` |
 
 (`wiki_nces_matches.csv` is produced by `../data_publish/match_wiki_nces.py`
 into `data_publish/output/`.)
@@ -55,9 +57,13 @@ The `validation` column tags every crawled row — `school`, `unverified`,
 `defunct`, `out_of_scope`, or `non_school`. Nothing is dropped at crawl time;
 leaks are **labeled, not removed**, so the clean set is reproduced by filtering
 on `validation == school` (keep `unverified` too while reviewing).
+`enrich_schools.py` carries the tag through, and `match_wiki_nces.py` applies
+that filter itself (`--statuses`, default `school`), so the full tagged crawl can
+be enriched as-is.
 
 Matching is tiered — exact Wikidata NCES-ID → exact name+state → fuzzy name
-similarity within the same state (rapidfuzz, `difflib` fallback). The score
+similarity within the same state (rapidfuzz, `difflib` fallback). Each NCES
+school is claimed by at most one article (the strongest match wins). The score
 column lets low-confidence rows be reviewed or filtered.
 
 ## Notes

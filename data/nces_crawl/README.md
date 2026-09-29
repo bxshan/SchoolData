@@ -3,8 +3,11 @@
 Downloads and combines U.S. K-12 school data from the National Center for
 Education Statistics (NCES) into unified master CSVs.
 
-- **Public schools**: NCES Common Core of Data (CCD), 2023-24
+- **Public schools**: NCES Common Core of Data (CCD) — enrollment/staffing
+  2024-25, directory (name/address/phone) 2025-26 preliminary
 - **Private schools**: NCES Private School Survey (PSS), 2023-24
+
+Last downloaded 2026-09-28.
 
 ## Structure
 
@@ -35,9 +38,9 @@ private uses PSS numeric codes; no cross-sector conversion is applied.
 
 | File | Schools | Columns | Coverage |
 |---|---|---|---|
-| `output_public_schools/public_schools_master.csv` | 100,771 | 27 | 50 states + DC + 5 territories |
-| `output_private_schools/private_schools_master.csv` | 22,756 | 72 | 50 states + DC |
-| `output_all_schools/all_schools_master.csv` | ~122,936 | 85 | union of the above |
+| `output_public_schools/public_schools_master.csv` | 100,282 | 26 | 50 states + DC + 5 territories |
+| `output_private_schools/private_schools_master.csv` | 22,239 | 71 | 50 states + DC |
+| `output_all_schools/all_schools_master.csv` | 122,521 | 85 | union of the above |
 
 Common core fields: school/district IDs, name, grade range, address, phone,
 enrollment, teachers, student-teacher ratio, type. Public adds charter status,
@@ -56,6 +59,7 @@ race/ethnicity, associations, …).
 cd generate_articles
 python generate_article.py --id 010135002667        # one school by NCES id
 python generate_article.py --name "A C Moore Primary School"
+python generate_article.py --demo --year 2022-23      # override the data vintage
 python run_samples.py --n 10                         # 10 random schools -> stdout
 python run_samples.py --n -1 --out all_articles.jsonl   # all schools -> output_generated_articles/
 ```
@@ -65,13 +69,26 @@ to the fixed `output_generated_articles/` dir (a sibling of `output_all_schools/
 seed the open dataset or draft Wikipedia stubs. Pass a bare `--out` name to land it
 there; a path with a separator writes elsewhere.
 
+The "As of the <year> school year" clause uses `DATA_YEAR` in
+`generate_article.py` (per sector; currently public 2024-25, private 2023-24).
+Update it when you re-download a newer NCES release, or pass `--year` for a
+one-off run.
+
 ## Notes
 
-- Downloaded files are HTML tables saved as `.xls`, parsed with pandas
-  `read_html()` (`lxml`). Large states (e.g. California, ~10k schools) need longer
-  popup/download timeouts.
-- Dependencies: `pip install pandas lxml selenium webdriver-manager`
-  (`combine_all_schools.py` needs none).
+- Downloaded files are HTML tables saved as `.xls`, parsed with the stdlib
+  `html.parser` in `combine_all_schools.py` (no lxml needed).
+- The NCES public search is slow (a state's results can take minutes). The
+  scraper blocks page assets, polls up to 5 min for results, retries each state
+  3× on a fresh Chrome, and **resumes**: finished `<State>_<FIPS>.xls` files are
+  reused, so re-running after an interruption only fetches what's missing
+  (`--fresh` re-downloads everything). If any state still fails, the master is
+  written as `*.partial.csv` and the existing one is left untouched.
+- A full public run takes ~2 h; private ~5 min.
+- Scripts resolve their download/output dirs next to themselves, so they can be
+  run from any working directory.
+- Dependencies: `pip install pandas selenium webdriver-manager`
+  (`combine_all_schools.py` and `generate_articles/` need none).
 
 ## Author
 
