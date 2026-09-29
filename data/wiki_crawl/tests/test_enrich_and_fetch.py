@@ -55,3 +55,14 @@ def test_clean_text_strips_leftover_markup_and_boilerplate():
            "\n== References ==\n1. Some ref\n=== Sub ===\nmore ref")
     assert f.clean_text(raw) == ("Troy High School is a school in Troy. "
                                  "It opened in 1920. Founded early.")
+
+
+def test_clean_text_drops_unbalanced_brackets_from_broken_articles():
+    # Saddleback High School's article carries a stray "]]" from a bad edit.
+    assert f.clean_text("Alumni: Daniel Arreolaiola]] - Sport caster") == \
+        "Alumni: Daniel Arreolaiola - Sport caster"
+
+
+def test_clean_text_is_idempotent():
+    once = f.clean_text("A [[b|c]] school {{x}}.[1] It is.")
+    assert f.clean_text(once) == once

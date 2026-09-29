@@ -86,6 +86,7 @@ def clean_text(text):
     for _ in range(3):                                   # nested {{a|{{b}}}}
         text = re.sub(r"\{\{[^{}]*\}\}", " ", text)
     text = re.sub(r"\[\[(?:[^\]|]*\|)?([^\]]*)\]\]", r"\1", text)   # [[a|b]] -> b
+    text = re.sub(r"\[\[|\]\]|\{\{|\}\}", " ", text)                 # unbalanced leftovers
     text = re.sub(r"\[(?:\d+|[a-z]|citation needed|clarification needed)\]", "", text)
     text = re.sub(r"\s+([,.;:])", r"\1", text)
     return re.sub(r"\s+", " ", text).strip()
@@ -141,6 +142,27 @@ def _out(name):
     return name if os.path.dirname(name) else os.path.join(OUT_DIR, name)
 
 
+def reclean(path):
+    """Apply the current clean_text to every stored record, in place."""
+    changed, rows = 0, []
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            text = clean_text(r["text"])
+            if text != r["text"]:
+                changed += 1
+                r["text"], r["chars"] = text, len(text)
+            rows.append(r)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        for r in rows:
+            fh.write(json.dumps(r, ensure_ascii=False) + "\n")
+    os.replace(tmp, path)
+    sys.stderr.write(f"recleaned {len(rows):,} records ({changed:,} changed) -> {path}\n")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--in", dest="inp", default="schools_enriched.csv")
@@ -151,10 +173,16 @@ def main():
     ap.add_argument("--delay", type=float, default=0.1,
                     help="seconds to sleep between requests (be polite)")
     ap.add_argument("--timeout", type=float, default=60)
+    ap.add_argument("--reclean", action="store_true",
+                    help="re-run clean_text over the existing --out file (after a "
+                         "cleaning fix) without re-fetching, then exit")
     args = ap.parse_args()
 
     os.makedirs(OUT_DIR, exist_ok=True)
     args.inp, args.out = _out(args.inp), _out(args.out)
+    if args.reclean:
+        reclean(args.out)
+        return
 
     with open(args.inp, encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
