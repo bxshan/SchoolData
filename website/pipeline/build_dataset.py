@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """Build the static map dataset for SchoolData.
 
-Pulls the full NCES public-school directory (lat/lon for ~102k schools) from the
-Urban Institute Education Data API, flags which schools already have an English
-Wikipedia article, and writes a compact JSON the Next.js/Deck.gl frontend loads
-as a static asset.
+Builds every NCES school (public + private) from the same data the Hugging Face
+dataset uses — data/nces_crawl's all-schools master plus its NCES coordinates
+file (EDGE for public, the PSS public-use file for private) — flags which
+schools already have an English Wikipedia article, and writes a compact JSON
+the Next.js/Deck.gl frontend loads as a static asset.
 
-`has_wikipedia` is an EXACT join on the NCES school id (`ncessch`) against
-`data/wiki_nces_matches.csv` — the audited Wikipedia<->NCES matcher output
-(exact Wikidata nces_id + name+state + high-confidence fuzzy). This replaces the
-old naive name+state matching (which over-counted via shared generic words).
+`has_wikipedia` is an EXACT join on the NCES school id against the audited
+Wikipedia<->NCES matcher output (data/data_publish/output/wiki_nces_matches.csv).
+
+--urban keeps the older path (public schools from the Urban Institute API,
+private schools merged later with --add-private) as a fallback.
 
 This is the "local heavy-lifting / write side": run it locally, commit the
 output, and Vercel serves it from its CDN — the browser never queries a database
@@ -24,9 +26,9 @@ Output: web/public/data/schools.json
 plus state_coverage.json and county_coverage.json aggregates.
 
 Usage:
-    python build_dataset.py                 # full Urban API pull + flag + write
-    python build_dataset.py --reflag        # re-flag existing schools.json (no API)
-    python build_dataset.py --year 2021 --matches ../data/wiki_nces_matches.csv
+    python build_dataset.py                 # NCES master + coordinates + flag + write
+    python build_dataset.py --reflag        # re-flag existing schools.json
+    python build_dataset.py --urban --year 2021   # legacy Urban API pull
 """
 
 import argparse
@@ -40,7 +42,10 @@ import requests
 
 NCES_API = "https://educationdata.urban.org/api/v1/schools/ccd/directory/{year}/"
 HERE = os.path.dirname(__file__)
-DEFAULT_MATCHES = os.path.join(HERE, "..", "data", "wiki_nces_matches.csv")
+DATA = os.path.join(HERE, "..", "..", "data")
+DEFAULT_MATCHES = os.path.join(DATA, "data_publish", "output", "wiki_nces_matches.csv")
+DEFAULT_MASTER = os.path.join(DATA, "nces_crawl", "output_all_schools", "all_schools_master.csv")
+DEFAULT_COORDS = os.path.join(DATA, "nces_crawl", "output_all_schools", "school_coordinates.csv")
 OUT = os.path.join(HERE, "..", "web", "public", "data", "schools.json")
 
 LEVEL = {"1": "elementary", "2": "middle", "3": "high", "4": "other"}
@@ -189,6 +194,71 @@ def build_private_rows(master, geocode, wiki_coords, matched_ids):
     return rows, n_census, n_wiki, n_nocoord
 
 
+_MASTER_GRADE = {"PK": -1, "KG": 0}
+
+
+def _master_grade(code):
+    """CCD grade code (PK, KG, 01-12, 13) -> the map's form (PK, K, 1-12, 13)."""
+    code = (code or "").strip().upper()
+    if code in _MASTER_GRADE:
+        return _grade(_MASTER_GRADE[code])
+    return _grade(code) if code.isdigit() else ""
+
+
+def _span_level(lo, hi):
+    """Map level from a public grade span (the bulk directory's own LEVEL isn't
+    in the master): elementary <= 5, middle 6-8, high >= 9, else other."""
+    order = {"PK": -1, "K": 0}
+    try:
+        a, b = order.get(lo, None), order.get(hi, None)
+        a = int(lo) if a is None else a
+        b = int(hi) if b is None else b
+    except ValueError:
+        return "other"
+    if b <= 5:
+        return "elementary"
+    if a >= 6 and b <= 8:
+        return "middle"
+    if a >= 9:
+        return "high"
+    return "other"
+
+
+def load_coords(path):
+    """school_id -> (lat, lon, county_fips) from data/nces_crawl."""
+    with open(path, newline="", encoding="utf-8") as f:
+        return {r["school_id"]: (float(r["lat"]), float(r["lon"]), r["county_fips"])
+                for r in csv.DictReader(f) if r["lat"] and r["lon"]}
+
+
+def rows_from_master(master_path, coords):
+    """Compact map rows for every NCES school with coordinates.
+    Returns (rows, n_nocoord)."""
+    rows, n_nocoord = [], 0
+    with open(master_path, newline="", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            sid = r["school_id"].strip()
+            if sid not in coords:
+                n_nocoord += 1
+                continue
+            lat, lon, county = coords[sid]
+            row = {"i": sid, "n": r["school_name"].strip(), "s": r["state"].strip().upper(),
+                   "c": county, "ci": r["city"].strip(), "a": r["address"].strip(),
+                   "z": r["zip"].strip(), "e": _enroll(r.get("total_students"))}
+            if r["sector"] == "public":
+                gl, gh = _master_grade(r["low_grade"]), _master_grade(r["high_grade"])
+                row.update({"d": r.get("District", ""), "lv": _span_level(gl, gh),
+                            "ph": r.get("phone", ""), "tf": _enroll(r.get("teachers")),
+                            "gl": gl, "gh": gh,
+                            "ch": r.get("Charter", "") if r.get("Charter") in ("Yes", "No") else "",
+                            "mg": ""})        # magnet status isn't in the CCD 2024-25 directory
+            else:
+                row.update({"d": "", "lv": PSS_LEVEL.get(r.get("PSS_LEVEL", "").strip(), "other")})
+            row.update({"w": 0, "x": round(lon, 5), "y": round(lat, 5)})
+            rows.append(row)
+    return rows, n_nocoord
+
+
 def fetch_nces(session, year, delay):
     url = NCES_API.format(year=year)
     page, out = 1, []
@@ -284,14 +354,16 @@ def main():
     ap.add_argument("--out", default=OUT)
     ap.add_argument("--delay", type=float, default=0.3)
     ap.add_argument("--proxy", default=None)
+    ap.add_argument("--urban", action="store_true",
+                    help="legacy: pull public schools from the Urban Institute API")
+    ap.add_argument("--coords", default=DEFAULT_COORDS)
     ap.add_argument("--reflag", action="store_true",
                     help="recompute has_wikipedia on the existing schools.json "
                          "(no Urban API pull)")
     ap.add_argument("--add-private", action="store_true",
                     help="merge geocoded NCES private schools into the existing "
                          "schools.json (needs private_geocoded.csv)")
-    ap.add_argument("--master", default=os.path.join(HERE, "..", "..", "data", "nces_crawl",
-                    "output_all_schools", "all_schools_master.csv"))
+    ap.add_argument("--master", default=DEFAULT_MASTER)
     ap.add_argument("--geocode", default=os.path.join(HERE, "..", "data", "private_geocoded.csv"))
     ap.add_argument("--enriched", default=os.path.join(HERE, "..", "data", "schools_enriched.csv"))
     args = ap.parse_args()
@@ -340,6 +412,22 @@ def main():
             f"  private w/ wikipedia  : {n_match:,}\n"
             f"  total rows            : {len(rows):,}\n"
             f"  states={len(state_agg)} counties={len(county_agg)}\n"
+        )
+        return
+
+    if not args.urban:
+        coords = load_coords(args.coords)
+        rows, n_nocoord = rows_from_master(args.master, coords)
+        n_match = flag(rows, matched_ids)
+        state_agg, county_agg = write_outputs(args.out, rows)
+        mb = os.path.getsize(args.out) / 1e6
+        sys.stderr.write(
+            f"\nDone. {len(rows):,} schools -> {args.out} ({mb:.1f} MB)\n"
+            f"  public/private: {sum('ph' in r for r in rows):,} / "
+            f"{sum('ph' not in r for r in rows):,}\n"
+            f"  has_wikipedia : {n_match:,} ({100*n_match/max(len(rows),1):.1f}%)\n"
+            f"  states={len(state_agg)}  counties={len(county_agg)}\n"
+            f"  dropped (no coordinates): {n_nocoord}\n"
         )
         return
 

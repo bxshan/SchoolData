@@ -19,8 +19,9 @@ Outputs:
       year (status Open/New/Added/Changed Boundary/Agency/Reopened); numbers as
       plain values, blank when NCES reports missing/not applicable
   output_all_schools/school_coordinates.csv
-      school_id, lat, lon, source — public (EDGE) and private (PSS) schools, used
-      by the Wikipedia matcher's geo tier and state inference
+      school_id, lat, lon, county_fips, source — public (EDGE) and private (PSS)
+      schools; used by the website map, the Wikipedia matcher's geo tier and
+      enrich's state inference
 
 Private schools still come from the PSS search export (download_schools.py
 --type private, ~5 min): the PSS public-use file uses questionnaire item codes,
@@ -160,7 +161,9 @@ def build_public():
             "High Grade": d["GSHI"] if d["GSHI"] not in ("N", "M") else "",
             "School Name": d["SCH_NAME"], "District": d["LEA_NAME"],
             "County Name": g.get("NMCNTY", ""), "Street Address": d["LSTREET1"],
-            "City": d["LCITY"], "State": d["ST"], "ZIP": d["LZIP"],
+            # Location state: CCD files Bureau of Indian Education schools under
+            # ST = "BI"; LSTATE is where the school physically is.
+            "City": d["LCITY"], "State": d["LSTATE"] or d["ST"], "ZIP": d["LZIP"],
             "ZIP 4-digit": d["LZIP4"], "Phone": d["PHONE"],
             "Locale Code": locale, "Locale": LOCALE_LABEL.get(locale, ""),
             "Charter": charter, "Students": students, "Teachers": fte,
@@ -172,7 +175,7 @@ def build_public():
             "Status": d["SY_STATUS_TEXT"],
         })
         if g.get("LAT") and g.get("LON"):
-            coords.append((sid, g["LAT"], g["LON"], f"EDGE public {YEAR}"))
+            coords.append((sid, g["LAT"], g["LON"], g.get("CNTY", ""), f"EDGE public {YEAR}"))
 
     os.makedirs(os.path.dirname(PUBLIC_OUT), exist_ok=True)
     with open(PUBLIC_OUT, "w", newline="", encoding="utf-8") as fh:
@@ -188,7 +191,9 @@ def build_public():
 
 
 def private_coords():
-    return [(r["PPIN"], r["LATITUDE24"], r["LONGITUDE24"], "PSS public-use 2324")
+    return [(r["PPIN"], r["LATITUDE24"], r["LONGITUDE24"],
+             (r["PSTANSI"] + r["PCNTY"]) if r.get("PSTANSI") and r.get("PCNTY") else "",
+             "PSS public-use 2324")
             for r in _zip_reader(FILES["pss"])
             if r.get("LATITUDE24") and r.get("LONGITUDE24")]
 
@@ -203,7 +208,7 @@ def main():
     os.makedirs(os.path.dirname(COORDS_OUT), exist_ok=True)
     with open(COORDS_OUT, "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
-        w.writerow(["school_id", "lat", "lon", "source"])
+        w.writerow(["school_id", "lat", "lon", "county_fips", "source"])
         w.writerows(sorted(coords))
     print(f"coordinates: {len(coords):,} schools -> {COORDS_OUT}")
 
