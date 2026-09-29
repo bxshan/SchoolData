@@ -3,9 +3,9 @@
 **Date:** 2026-06-29 · **Scope:** the clean Wikipedia school set vs. the NCES master.
 **No pipeline/matcher code was changed** — this is analysis only.
 
-> **Note (2026-09-29).** A June 2026 snapshot. The fixes it motivated are tracked
-> in [`data/wiki_crawl/UNMATCHED_RESOLUTION_PLAN.md`](../data/wiki_crawl/UNMATCHED_RESOLUTION_PLAN.md);
-> the matcher now writes the current unmatched set with a reason to
+> **Note (2026-09-29).** A June 2026 snapshot. The fixes it motivated are in the
+> matcher and enrich code on branch `data-pipeline-improvements`; the matcher now
+> writes the current unmatched set with a reason to
 > `data/data_publish/output/wiki_unmatched.csv`.
 
 ## The unmatched set
