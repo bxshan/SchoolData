@@ -66,3 +66,55 @@ def test_clean_text_drops_unbalanced_brackets_from_broken_articles():
 def test_clean_text_is_idempotent():
     once = f.clean_text("A [[b|c]] school {{x}}.[1] It is.")
     assert f.clean_text(once) == once
+
+
+def _rec(**kw):
+    base = {"title": "X School", "state": "Ohio", "description": "", "instance_of": "school",
+            "validation": "school", "wikidata_qid": "Q1", "country": "United States",
+            "dissolved": "", "lat": "", "lon": "", "operating": "", "validation_note": ""}
+    return {**base, **kw}
+
+
+def _reval(**kw):
+    recs = {1: _rec(**kw)}
+    e.revalidate(recs)
+    return recs[1]
+
+
+def test_revalidate_moves_networks_and_districts_out():
+    assert _reval(description="Charter school network in Chicago")["validation"] == "out_of_scope"
+    assert _reval(description="School district in Texas")["validation"] == "out_of_scope"
+
+
+def test_revalidate_keeps_a_school_that_mentions_its_district():
+    r = _reval(description="Public high school in the Fairfax County school district")
+    assert r["validation"] == "school" and r["validation_note"] == ""
+
+
+def test_revalidate_higher_ed_but_not_college_prep():
+    assert _reval(description="Private university in Alabama")["validation"] == "out_of_scope"
+    assert _reval(description="Private college preparatory school")["validation"] == "school"
+
+
+def test_revalidate_foreign_only_without_a_us_state():
+    assert _reval(country="Canada", state="")["validation"] == "out_of_scope"
+    # Wikidata country bug: French High School (Beaumont, Texas) tagged France
+    assert _reval(country="France", state="Texas")["validation"] == "school"
+
+
+def test_revalidate_rescues_unverified_described_as_school():
+    r = _reval(validation="unverified", description="Private school in Queens, New York")
+    assert r["validation"] == "school" and "rescued" in r["validation_note"]
+
+
+def test_revalidate_operating_flag():
+    assert _reval()["operating"] == "yes"
+    assert _reval(dissolved="1")["operating"] == "no"
+    assert _reval(description="Former school in Ohio")["operating"] == "no"
+    assert _reval(instance_of="school building")["operating"] == "no"
+    assert _reval(description="Historic public high school in Boston")["operating"] == "yes"
+
+
+def test_revalidate_fills_state_from_description():
+    r = _reval(state="", description="Public elementary school in Queens, New York")
+    assert r["state"] == "New York" and "description" in r["validation_note"]

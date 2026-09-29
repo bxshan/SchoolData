@@ -1,0 +1,8 @@
+# Data pipeline dependencies (Python 3.11+). Install: pip install -r requirements.txt
+requests>=2.31          # Wikipedia / Wikidata API (wiki_crawl)
+rapidfuzz>=3.0          # fuzzy name matching (data_publish; stdlib difflib fallback)
+pyarrow>=15             # Parquet output (data_publish)
+pandas>=2.0             # NCES search-tool scraper (nces_crawl/download_schools.py)
+selenium>=4.20          # NCES search-tool scraper — private schools
+webdriver-manager>=4.0  # fetches the matching ChromeDriver
+pytest>=8               # tests
