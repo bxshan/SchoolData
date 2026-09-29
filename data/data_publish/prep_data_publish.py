@@ -1,5 +1,5 @@
-# Author: Boxuan Shan + support from Claude Opus 4.8
 #!/usr/bin/env python3
+# Author: Boxuan Shan + support from Claude Opus 4.8
 """Build the `articles` release of the us-k12-schools Hugging Face dataset.
 
 One row per NCES school. Inputs:
@@ -57,7 +57,9 @@ DEFAULT_WIKI_TEXT = os.path.join(HERE, "..", "wiki_crawl", "output", "wiki_artic
 CARD_FILES = ("README.md", "CHANGELOG.md", "LICENSE")
 
 sys.path.insert(0, os.path.join(HERE, "..", "nces_crawl", "generate_articles"))
-from generate_article import DATA_YEAR, STATE_NAMES  # noqa: E402
+from generate_article import DATA_YEAR  # noqa: E402  (data vintage per sector)
+sys.path.insert(0, os.path.join(HERE, ".."))
+from common.states import USPS_TO_NAME  # noqa: E402
 
 FIELDS = ["nces_id", "name", "state", "sector", "text", "from_wikipedia",
           "wikipedia_title", "wikidata_qid", "wikipedia_revid", "source", "license"]
@@ -195,7 +197,7 @@ def card_values(rows, matches, wiki_text, stats):
     cov = sorted((w / t, st) for st, (t, w) in per_state.items() if t >= 100)
 
     def fmt(items):
-        names = [f"{100 * c:.1f}% ({STATE_NAMES.get(st, st).removeprefix('the ')})"
+        names = [f"{100 * c:.1f}% ({USPS_TO_NAME.get(st, st)})"
                  for c, st in items]
         return ", ".join(names[:-1]) + " and " + names[-1] if len(names) > 1 else "".join(names)
 

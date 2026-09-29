@@ -1,5 +1,5 @@
-# Author: Boxuan Shan + support from Claude Opus 4.8
 #!/usr/bin/env python3
+# Author: Boxuan Shan + support from Claude Opus 4.8
 """Clean + enrich the raw K-12 school crawl into a usable dataset.
 
 Pipeline (reads schools.csv -> writes schools_enriched.csv):
@@ -42,23 +42,12 @@ import time
 
 import requests
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from common.states import USPS_TO_NAME, state_in_text  # noqa: E402
+
 API_URL = "https://en.wikipedia.org/w/api.php"
 USER_AGENT = "K12SchoolEnricher/1.0 (contact: boxuan.shan@gmail.com) python-requests"
 
-STATES = [
-    "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
-    "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho",
-    "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine",
-    "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi",
-    "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey",
-    "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio",
-    "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina",
-    "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia",
-    "Washington", "West Virginia", "Wisconsin", "Wyoming", "District of Columbia",
-    "Puerto Rico", "Guam", "American Samoa", "Northern Mariana Islands",
-    "United States Virgin Islands", "U.S. Virgin Islands",
-]
-_STATES_BY_LEN = sorted(STATES, key=len, reverse=True)
 
 # Title patterns that are never a school (disambig/media pages).
 TITLE_DROP = re.compile(
@@ -108,10 +97,8 @@ def api_get(session, params, timeout=60, max_retries=8, base_url=None):
 
 
 def state_of(text):
-    for s in _STATES_BY_LEN:
-        if s in text:
-            return s
-    return ""
+    """Full state name mentioned in `text` (longest match wins), or ''."""
+    return state_in_text(text)
 
 
 def level_of(text):
@@ -389,22 +376,6 @@ def enrich_wikidata(session, records, delay):
 # all P31 types, country, dissolution, coordinates). Each change is recorded in
 # `validation_note`; nothing is dropped.
 
-USPS = {
-    "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California",
-    "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "DC": "District of Columbia",
-    "FL": "Florida", "GA": "Georgia", "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois",
-    "IN": "Indiana", "IA": "Iowa", "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana",
-    "ME": "Maine", "MD": "Maryland", "MA": "Massachusetts", "MI": "Michigan",
-    "MN": "Minnesota", "MS": "Mississippi", "MO": "Missouri", "MT": "Montana",
-    "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire", "NJ": "New Jersey",
-    "NM": "New Mexico", "NY": "New York", "NC": "North Carolina", "ND": "North Dakota",
-    "OH": "Ohio", "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania",
-    "RI": "Rhode Island", "SC": "South Carolina", "SD": "South Dakota", "TN": "Tennessee",
-    "TX": "Texas", "UT": "Utah", "VT": "Vermont", "VA": "Virginia", "WA": "Washington",
-    "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming", "PR": "Puerto Rico",
-    "GU": "Guam", "AS": "American Samoa", "MP": "Northern Mariana Islands",
-    "VI": "United States Virgin Islands",
-}
 US_COUNTRIES = {"united states", "united states of america", "puerto rico", "guam",
                 "american samoa", "northern mariana islands",
                 "united states virgin islands"}
@@ -455,7 +426,7 @@ class NcesLocator:
                     km = 111.0 * math.hypot(y - lat, (x - lon) * math.cos(math.radians(lat)))
                     if km < best_km:
                         best, best_km = st, km
-        return USPS.get(best, "")
+        return USPS_TO_NAME.get(best, "")
 
 
 def revalidate(records, locator=None):

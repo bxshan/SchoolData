@@ -1,5 +1,5 @@
-# Author: Boxuan Shan + support from Claude Opus 4.8
 #!/usr/bin/env python3
+# Author: Boxuan Shan + support from Claude Opus 4.8
 """
 NCES School Scraper (State-by-State)
 

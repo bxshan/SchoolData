@@ -1,5 +1,5 @@
-# Author: Boxuan Shan + support from Claude Opus 4.8
 #!/usr/bin/env python3
+# Author: Boxuan Shan + support from Claude Opus 4.8
 """Match the cleaned Wikipedia school set against the NCES master and write a CSV
 of all matches.
 
@@ -46,6 +46,9 @@ import re
 import sys
 from collections import defaultdict
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from common.states import NAME_TO_USPS, state_code  # noqa: E402
+
 try:
     from rapidfuzz import fuzz
     _BACKEND = "rapidfuzz"
@@ -58,28 +61,6 @@ except Exception:                       # pragma: no cover - portability fallbac
             ta, tb = " ".join(sorted(a.split())), " ".join(sorted(b.split()))
             return difflib.SequenceMatcher(None, ta, tb).ratio() * 100
     _BACKEND = "difflib"
-
-# Full state name -> USPS code (NCES uses 2-letter codes; Wikipedia state is the
-# full name or blank).
-STATE_ABBR = {
-    "alabama": "AL", "alaska": "AK", "arizona": "AZ", "arkansas": "AR",
-    "california": "CA", "colorado": "CO", "connecticut": "CT", "delaware": "DE",
-    "florida": "FL", "georgia": "GA", "hawaii": "HI", "idaho": "ID",
-    "illinois": "IL", "indiana": "IN", "iowa": "IA", "kansas": "KS",
-    "kentucky": "KY", "louisiana": "LA", "maine": "ME", "maryland": "MD",
-    "massachusetts": "MA", "michigan": "MI", "minnesota": "MN", "mississippi": "MS",
-    "missouri": "MO", "montana": "MT", "nebraska": "NE", "nevada": "NV",
-    "new hampshire": "NH", "new jersey": "NJ", "new mexico": "NM", "new york": "NY",
-    "north carolina": "NC", "north dakota": "ND", "ohio": "OH", "oklahoma": "OK",
-    "oregon": "OR", "pennsylvania": "PA", "rhode island": "RI",
-    "south carolina": "SC", "south dakota": "SD", "tennessee": "TN", "texas": "TX",
-    "utah": "UT", "vermont": "VT", "virginia": "VA", "washington": "WA",
-    "west virginia": "WV", "wisconsin": "WI", "wyoming": "WY",
-    "district of columbia": "DC", "puerto rico": "PR", "guam": "GU",
-    "american samoa": "AS", "northern mariana islands": "MP",
-    "virgin islands": "VI", "u.s. virgin islands": "VI",
-    "united states virgin islands": "VI",
-}
 
 _ABBREV = [
     (r"\bst\.?\b", "saint"), (r"\bmt\.?\b", "mount"), (r"\bjr\.?\b", "junior"),
@@ -102,13 +83,6 @@ GENERIC = {
 def core_name(norm):
     """Distinctive tokens only — generic education words removed."""
     return " ".join(t for t in norm.split() if t not in GENERIC)
-
-
-def state_code(s):
-    s = (s or "").strip()
-    if len(s) == 2 and s.upper() in set(STATE_ABBR.values()):
-        return s.upper()
-    return STATE_ABBR.get(s.lower(), "")
 
 
 def norm_name(s):
@@ -145,7 +119,7 @@ def title_explicit_city(title):
     inner = m.group(1).strip().lower()
     if "," in inner:
         return inner.split(",")[0].strip()
-    if inner in STATE_ABBR or inner in _NON_PLACE or re.search(r"\d", inner):
+    if inner in NAME_TO_USPS or inner in _NON_PLACE or re.search(r"\d", inner):
         return ""
     return inner
 

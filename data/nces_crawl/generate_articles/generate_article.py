@@ -1,5 +1,5 @@
-# Author: Boxuan Shan + support from Claude Opus 4.8
 #!/usr/bin/env python3
+# Author: Boxuan Shan + support from Claude Opus 4.8
 """Deterministically render a Wikipedia-style plaintext article for a US K-12
 school using ALL available NCES metadata.
 
@@ -25,8 +25,9 @@ import argparse
 import csv
 import os
 import re
+import sys
 
-HERE = os.path.dirname(__file__)
+HERE = os.path.dirname(os.path.abspath(__file__))
 MASTER = os.path.join(HERE, "..", "output_all_schools",
                       "all_schools_master.csv")
 
@@ -35,23 +36,8 @@ MASTER = os.path.join(HERE, "..", "output_all_schools",
 # Update together with build_from_bulk.py when moving to a newer release.
 DATA_YEAR = {"public": "2024-25", "private": "2023-24"}
 
-STATE_NAMES = {
-    "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas",
-    "CA": "California", "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware",
-    "DC": "the District of Columbia", "FL": "Florida", "GA": "Georgia",
-    "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois", "IN": "Indiana", "IA": "Iowa",
-    "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine",
-    "MD": "Maryland", "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota",
-    "MS": "Mississippi", "MO": "Missouri", "MT": "Montana", "NE": "Nebraska",
-    "NV": "Nevada", "NH": "New Hampshire", "NJ": "New Jersey", "NM": "New Mexico",
-    "NY": "New York", "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio",
-    "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode Island",
-    "SC": "South Carolina", "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas",
-    "UT": "Utah", "VT": "Vermont", "VA": "Virginia", "WA": "Washington",
-    "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming", "PR": "Puerto Rico",
-    "GU": "Guam", "AS": "American Samoa", "MP": "the Northern Mariana Islands",
-    "VI": "the U.S. Virgin Islands",
-}
+sys.path.insert(0, os.path.join(HERE, "..", ".."))
+from common.states import PROSE_NAME as STATE_NAMES  # noqa: E402  ("the District of Columbia")
 
 # Public CCD `type` labels -> adjective for the lead ("Regular" carries no word).
 PUB_TYPE_ADJ = {"Regular": "", "Other/Alternative": "alternative ",

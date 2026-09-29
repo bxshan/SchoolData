@@ -1,5 +1,5 @@
-# Author: Boxuan Shan + support from Claude Opus 4.8
 #!/usr/bin/env python3
+# Author: Boxuan Shan + support from Claude Opus 4.8
 """Crawl Wikipedia for all US K-12 school articles (public + private) and save
 their titles and links.
 

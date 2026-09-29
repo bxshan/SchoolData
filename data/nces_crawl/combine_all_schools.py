@@ -1,5 +1,5 @@
-# Author: Boxuan Shan + support from Claude Opus 4.8
 #!/usr/bin/env python3
+# Author: Boxuan Shan + support from Claude Opus 4.8
 """
 Combine the public and private NCES masters into a single unified master CSV
 covering all K-12 schools in the US.
