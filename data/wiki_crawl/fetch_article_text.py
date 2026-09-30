@@ -43,8 +43,9 @@ from datetime import datetime, timezone
 
 import requests
 
-# Reuse the crawler's polite API client (retry/backoff/maxlag/rate-limit).
-from crawl_k12_schools import API_URL, USER_AGENT, api_get
+# The shared polite API client (retry/backoff/maxlag/rate-limit).
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from common.wiki_api import USER_AGENT, api_get  # noqa: E402
 
 # Trailing/reference sections to drop entirely (matched case-insensitively on the
 # heading text). Their subsections are dropped with them.

@@ -44,9 +44,8 @@ import requests
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from common.states import USPS_TO_NAME, state_in_text  # noqa: E402
+from common.wiki_api import USER_AGENT, WIKIDATA_API, api_get  # noqa: E402
 
-API_URL = "https://en.wikipedia.org/w/api.php"
-USER_AGENT = "K12SchoolEnricher/1.0 (contact: boxuan.shan@gmail.com) python-requests"
 
 
 # Title patterns that are never a school (disambig/media pages).
@@ -64,36 +63,6 @@ ENRICHED_FIELDS = ["title", "url", "pageid", "state", "level", "description",
                    "redirect_to", "defunct_category", "country", "dissolved",
                    "operating", "validation_note"]
 ACCREDITATION = re.compile(r"accredit|commission on|association of", re.I)
-
-
-def api_get(session, params, timeout=60, max_retries=8, base_url=None):
-    params = {**params, "format": "json", "formatversion": "2", "maxlag": "5"}
-    url = base_url or API_URL
-    backoff = 1.0
-    for attempt in range(max_retries):
-        try:
-            resp = session.get(url, params=params, timeout=timeout)
-            if resp.status_code in (429, 503):
-                ra = resp.headers.get("Retry-After")
-                wait = float(ra) if (ra and ra.isdigit()) else backoff
-                sys.stderr.write(f"  ! {resp.status_code}; waiting {wait:.0f}s\n")
-                time.sleep(wait)
-                backoff = min(backoff * 2, 60)
-                continue
-            resp.raise_for_status()
-            data = resp.json()
-            if data.get("error", {}).get("code") == "maxlag":
-                time.sleep(backoff)
-                backoff = min(backoff * 2, 60)
-                continue
-            return data
-        except (requests.RequestException, ValueError) as exc:
-            if attempt == max_retries - 1:
-                raise
-            sys.stderr.write(f"  ! request failed ({exc}); retry in {backoff:.0f}s\n")
-            time.sleep(backoff)
-            backoff = min(backoff * 2, 60)
-    raise RuntimeError("giving up")
 
 
 def state_of(text):
@@ -258,7 +227,6 @@ def resolve_and_enrich(session, rows, delay):
     return out
 
 
-WIKIDATA_API = "https://www.wikidata.org/w/api.php"
 
 
 def _redirect_record(title, pageid, target, source_category):
