@@ -80,7 +80,7 @@ def test_name_state_rejects_when_every_candidate_is_elsewhere(nces):
     assert match(wiki("Notre Dame School (Albany, New York)", state="New York"), db) is None
 
 
-def test_nces_id_tier_is_trusted(nces):
+def test_nces_id_tier_matches_without_a_conflicting_level(nces):
     db = nces(pub("010000500870", "Albertville Middle School", "albertville", "07", "08"))
     rec, method, _ = match(wiki("Whatever Title", nces_id="010000500870"), db)
     assert method == "nces_id" and rec["school_id"] == "010000500870"
@@ -195,3 +195,17 @@ def test_coordinates_too_far_away_do_not_decide(nces):
     _with_coords(by_id["2"], 34.14, -118.39)
     w = {**wiki("Bridges Academy", state="California"), "lat": "40.0", "lon": "-100.0"}
     assert m.match_one(w, by_id, by_state, idx, 88.0, defaultdict(int)) is None
+
+
+def test_middle_college_and_intermediate_are_not_level_words():
+    assert m.school_levels(m.norm_name("Gary Middle College")) == set()
+    assert m.school_levels(m.norm_name("Goshen Intermediate School")) == set()
+    assert m.school_levels(m.norm_name("Lincoln Middle School")) == {"middle"}
+
+
+def test_nces_id_pointing_at_a_different_level_is_rejected(nces):
+    # Wikidata's id now belongs to a 6-8 school; the high school is found by name.
+    db = nces(pub("010000000001", "Bailey APAC Middle School", "jackson", "06", "08"),
+              pub("010000000002", "Bailey Magnet High School", "jackson", "09", "12"))
+    rec, method, _ = match(wiki("Bailey Magnet High School", nces_id="010000000001"), db)
+    assert (rec["school_id"], method) == ("010000000002", "name_state")

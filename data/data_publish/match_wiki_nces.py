@@ -17,7 +17,9 @@ Tiers — the first that yields a match wins for each article:
                     coordinates that shares a distinctive, non-place name word
                     and whose name core is broadly similar (token_set >= 60).
 
-Checks on tiers 2-4: a candidate is dropped when it contradicts the article —
+Every tier drops a candidate whose NCES grade span can't serve a level named in
+the article's title (Wikidata NCES ids can point at the school an id now
+belongs to). Tiers 2-4 also drop a candidate that contradicts the article —
 a different city named in the title ("(City, State)" or "(City)"), or an NCES
 grade span that can't serve the article's level (a high-school article is never
 put on a K-5 school). Equally good candidates (same-named schools, fuzzy ties)
@@ -136,16 +138,20 @@ def title_explicit_city(title):
 
 # Grade-level words in a normalized name -> level bucket. "Middle/High" yields
 # {middle, high}; names with no level word ("Pine Crest School") yield {}.
+# "Intermediate" is left out: it names grades 3-5 in some districts and 6-8 in
+# others. "Middle College" is a high-school model, not a middle school.
 LEVEL_WORDS = {
     "high": "high", "senior": "high", "secondary": "high", "hs": "high",
-    "middle": "middle", "junior": "middle", "intermediate": "middle", "ms": "middle",
+    "middle": "middle", "junior": "middle", "ms": "middle",
     "elementary": "elementary", "primary": "elementary", "elem": "elementary",
     "es": "elementary",
 }
 
 
 def school_levels(norm):
-    return {LEVEL_WORDS[t] for t in norm.split() if t in LEVEL_WORDS}
+    toks = norm.split()
+    return {LEVEL_WORDS[t] for i, t in enumerate(toks) if t in LEVEL_WORDS
+            and not (t == "middle" and toks[i + 1:i + 2] == ["college"])}
 
 
 # Grade number -> level bucket (PK = -1, K = 0).
@@ -323,9 +329,16 @@ def parse_statuses(s):
 def match_one(w, by_id, by_state, token_idx, threshold, stats, geo=None):
     """Best (nces_record, method, score) for one Wikipedia row, or None."""
     nid = (w.get("nces_id") or "").strip()
+    # Level words in the title are checked on every tier: a Wikidata NCES id can
+    # point at a school the id now belongs to ("Bailey Magnet High School" ->
+    # a 6-8 "Bailey APAC Middle School"); such an id is skipped and the name
+    # tiers get their chance.
+    tlevels = wiki_levels(w, norm_name(w["title"]), use_categories=False)
     # tier 1: exact NCES id
     if nid and nid in by_id:
-        return by_id[nid], "nces_id", 100.0
+        if levels_compatible(tlevels, by_id[nid]):
+            return by_id[nid], "nces_id", 100.0
+        stats["nces_id_level_rejected"] += 1
     # tier 1b: stale NCES id — Wikidata still carries an id NCES has since
     # re-issued (typically a district reorganization changes the 7-digit LEA
     # prefix but keeps the state and 5-digit school number). Accept a same-state,
@@ -335,7 +348,8 @@ def match_one(w, by_id, by_state, token_idx, threshold, stats, geo=None):
         for r in by_state.get(state_code(w["state"]) or "", ()):
             sid = r["school_id"]
             if (len(sid) == 12 and sid[:2] == nid[:2] and sid[-5:] == nid[-5:]
-                    and wcore and fuzz.token_sort_ratio(wcore, r["core"]) >= 80):
+                    and wcore and fuzz.token_sort_ratio(wcore, r["core"]) >= 80
+                    and levels_compatible(tlevels, r)):
                 stats["stale_id_recovered"] += 1
                 return r, "nces_id_stale", 100.0
 
@@ -352,7 +366,6 @@ def match_one(w, by_id, by_state, token_idx, threshold, stats, geo=None):
     if exact:
         # Title level words only here: an exact name match is strong evidence,
         # so the noisier category-inferred level isn't allowed to veto it.
-        tlevels = wiki_levels(w, wnorm, use_categories=False)
         ok = [r for r in exact
               if city_compatible(wexplicit, r["city"])
               and levels_compatible(tlevels, r)]
@@ -619,7 +632,8 @@ def main():
         f"\n=== matches -> {args.out} ===\n"
         f"  total matched : {len(matches):,} / {len(wiki):,} wiki "
         f"({100*len(matches)/max(len(wiki), 1):.1f}%)\n"
-        f"    by nces_id    : {stats['nces_id']:,}\n"
+        f"    by nces_id    : {stats['nces_id']:,}  "
+        f"(ids rejected on grade level: {stats['nces_id_level_rejected']:,})\n"
         f"    by name+state : {stats['name_state']:,}  "
         f"(candidates rejected on city/level: {stats['name_state_rejected']:,})\n"
         f"    by stale id   : {stats['nces_id_stale']:,}\n"
