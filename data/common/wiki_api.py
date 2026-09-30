@@ -1,3 +1,4 @@
+# Author: Boxuan Shan, with support from Claude (Anthropic)
 """MediaWiki / Wikidata API access shared by the wiki_crawl scripts."""
 
 import sys

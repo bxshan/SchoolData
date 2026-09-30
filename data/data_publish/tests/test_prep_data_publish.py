@@ -1,3 +1,4 @@
+# Author: Boxuan Shan, with support from Claude (Anthropic)
 # data_publish/tests/test_prep_data_publish.py
 import os
 import sys

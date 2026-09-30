@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Author: Boxuan Shan + support from Claude Opus 4.8
+# Author: Boxuan Shan, with support from Claude (Anthropic)
 """Clean + enrich the raw K-12 school crawl into a usable dataset.
 
 Pipeline (reads schools.csv -> writes schools_enriched.csv):

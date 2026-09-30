@@ -1,3 +1,4 @@
+# Author: Boxuan Shan, with support from Claude (Anthropic)
 # wiki_crawl/tests/test_enrich_and_fetch.py
 import os
 import sys

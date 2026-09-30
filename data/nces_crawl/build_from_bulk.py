@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Author: Boxuan Shan, with support from Claude (Anthropic)
 """Build the public-school master from NCES bulk data files (the default source).
 
 Replaces the Selenium scrape of the CCD search tool for public schools: the bulk

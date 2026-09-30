@@ -1,4 +1,4 @@
-# Author: Boxuan Shan + support from Claude Opus 4.8
+# Author: Boxuan Shan, with support from Claude (Anthropic)
 # wiki_crawl/tests/test_crawl_k12_schools.py
 import re
 import csv

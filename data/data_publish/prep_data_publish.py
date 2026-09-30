@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Author: Boxuan Shan + support from Claude Opus 4.8
+# Author: Boxuan Shan, with support from Claude (Anthropic)
 """Build the `articles` release of the us-k12-schools Hugging Face dataset.
 
 One row per NCES school. Inputs:

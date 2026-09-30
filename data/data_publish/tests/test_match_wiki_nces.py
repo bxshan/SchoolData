@@ -1,3 +1,4 @@
+# Author: Boxuan Shan, with support from Claude (Anthropic)
 # data_publish/tests/test_match_wiki_nces.py
 # Regression tests for match failures found while auditing the 2026-09 rebuild.
 import csv

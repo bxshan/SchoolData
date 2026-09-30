@@ -1,3 +1,4 @@
+# Author: Boxuan Shan, with support from Claude (Anthropic)
 # nces_crawl/tests/test_build_from_bulk.py
 # Each case here is a bug found while cross-checking the bulk build against the
 # CCD search-tool export (2026-09).

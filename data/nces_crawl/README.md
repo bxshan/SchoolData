@@ -109,7 +109,3 @@ one-off run.
 - Dependencies: `../requirements.txt` (only the scraper needs pandas/selenium;
   `build_from_bulk.py`, `combine_all_schools.py` and `generate_articles/` are
   stdlib-only).
-
-## Author
-
-Boxuan Shan + support from Claude Opus 4.8

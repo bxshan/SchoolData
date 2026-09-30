@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Author: Boxuan Shan, with support from Claude (Anthropic)
 """Fetch the full readable plaintext of each finalized school's Wikipedia article.
 
 Reads the enriched crawl (output/schools_enriched.csv) and pulls each article's

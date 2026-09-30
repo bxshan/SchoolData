@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Author: Boxuan Shan, with support from Claude (Anthropic)
 """Build the static map dataset for SchoolData.
 
 Builds every NCES school (public + private) from the same data the Hugging Face

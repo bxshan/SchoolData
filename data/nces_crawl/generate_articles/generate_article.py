@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Author: Boxuan Shan + support from Claude Opus 4.8
+# Author: Boxuan Shan, with support from Claude (Anthropic)
 """Deterministically render a Wikipedia-style plaintext article for a US K-12
 school using ALL available NCES metadata.
 

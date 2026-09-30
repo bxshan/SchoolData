@@ -1,3 +1,4 @@
+# Author: Boxuan Shan, with support from Claude (Anthropic)
 # common/tests/test_states.py
 import os
 import sys

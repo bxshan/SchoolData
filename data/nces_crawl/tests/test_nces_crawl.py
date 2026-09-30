@@ -1,3 +1,4 @@
+# Author: Boxuan Shan, with support from Claude (Anthropic)
 # nces_crawl/tests/test_nces_crawl.py
 import os
 import sys

@@ -69,3 +69,8 @@ reusable public good.
 |---|---|
 | [`data/`](data/README.md) | the data pipeline — NCES, Wikipedia crawl + matching, and the Hugging Face release (`make` builds everything) |
 | [`website/`](website/README.md) | the map: Next.js + Deck.gl frontend and the script that builds its data |
+
+## Credits
+
+Boxuan Shan, with support from Claude (Anthropic). Per-change authorship is in
+the git history (`Co-Authored-By` trailers).

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Author: Boxuan Shan, with support from Claude (Anthropic)
 """Release gate for the `articles` dataset: run after prep_data_publish.py and
 before uploading output/dist/ to Hugging Face. Exits non-zero if any check fails.
 

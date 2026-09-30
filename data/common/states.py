@@ -1,3 +1,4 @@
+# Author: Boxuan Shan, with support from Claude (Anthropic)
 """US states, DC and territories — the one copy every pipeline script uses.
 
 NCES covers the 50 states, DC and five territories (AS, GU, MP, PR, VI).

@@ -1,3 +1,4 @@
+# Author: Boxuan Shan, with support from Claude (Anthropic)
 # SchoolData data pipeline. Run from data/:
 #
 #   make            build the release in data_publish/output/dist/ and validate it
