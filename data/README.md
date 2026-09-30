@@ -12,7 +12,7 @@ The website map (`../website/`) is built from the same NCES data and matches.
 pip install -r requirements.txt
 brew install git-lfs && git lfs install && git lfs pull   # data CSVs live in LFS
 make            # build data_publish/output/dist/ and validate it
-make test       # all test suites
+make test       # all test suites (same as: pytest)
 make status     # which outputs exist, and which steps are stale
 ```
 

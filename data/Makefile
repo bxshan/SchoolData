@@ -86,10 +86,7 @@ nces:
 
 # --- Housekeeping -----------------------------------------------------------
 test:
-	cd common && $(PY) -m pytest -q tests
-	cd nces_crawl && $(PY) -m pytest -q tests
-	cd wiki_crawl && $(PY) -m pytest -q -m "not integration" tests
-	cd data_publish && $(PY) -m pytest -q tests
+	$(PY) -m pytest -q
 
 status:
 	@for f in $(PUBLIC) $(PRIVATE) $(MASTER) $(COORDS) $(CRAWL) $(ENRICHED) \

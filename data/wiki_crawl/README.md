@@ -97,5 +97,5 @@ re-run after new matches fetches only the new articles. Each line:
 
 - Filter the CSVs with a CSV-aware tool, never `awk -F,`: titles contain commas
   (`"… High School (Cedar Rapids, Iowa)"`).
-- Tests: `python -m pytest -m "not integration" tests` (the one integration test
-  calls the live API).
+- Tests: `pytest` from `data/` runs every suite; the one test that calls the live
+  API is marked `integration` and runs only with `pytest -m integration`.
