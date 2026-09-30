@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase, usingSupabase } from "../lib/supabase";
 import type { School } from "../lib/types";
 
-type Contact = { name: string; email: string; role: string; org: string; consent: boolean };
+type Contact = { name: string; email: string };
 type Saved = { school: School; contact?: Contact; at: string };
 
 const isEmail = (e: string) => /\S+@\S+\.\S+/.test(e);
@@ -33,7 +33,7 @@ function rowToSaved(r: any): Saved {
       lv: "", e: null, c: "",
     },
     contact: r.contact_email
-      ? { name: r.contact_name, email: r.contact_email, role: r.contact_role, org: r.contact_org, consent: true }
+      ? { name: r.contact_name, email: r.contact_email }
       : undefined,
     at: (r.created_at || "").slice(0, 10),
   };
@@ -44,7 +44,7 @@ function rowToSaved(r: any): Saved {
 async function lookupCloud(): Promise<Saved[]> {
   const { data, error } = await supabase!
     .from("contributions")
-    .select("nces_id, school_name, school_state, school_city, school_lat, school_lon, has_wikipedia, contact_name, contact_email, contact_role, contact_org, created_at")
+    .select("nces_id, school_name, school_state, school_city, school_lat, school_lon, has_wikipedia, contact_name, contact_email, created_at")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data || []).map(rowToSaved);
@@ -99,8 +99,6 @@ export default function MyContributions({
     if (isEmail(email)) setResults(lookupLocal(email));
   }
 
-  const withHours = results?.filter((r) => r.contact).length ?? 0;
-
   return (
     <aside className="editor account">
       <button className="close" onClick={onClose}>×</button>
@@ -150,9 +148,6 @@ export default function MyContributions({
         <>
           <div className="acct-summary">
             <b>{results.length}</b> contribution{results.length === 1 ? "" : "s"}
-            {withHours > 0 && (
-              <> · eligible for <b>{withHours * 3}–{withHours * 5}</b> volunteer hours</>
-            )}
           </div>
 
           {results.length === 0 ? (
@@ -166,7 +161,6 @@ export default function MyContributions({
                     <span className="acct-name">{r.school.n}</span>
                     <span className="acct-meta">
                       {[r.school.ci, r.school.s].filter(Boolean).join(", ")} · {r.at}
-                      {r.contact ? " · ⏱ hours pending" : " · no contact left"}
                     </span>
                   </span>
                   <span className="acct-go">›</span>

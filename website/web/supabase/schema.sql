@@ -27,8 +27,8 @@ create table if not exists public.contributions (
   fact_flags    jsonb,                 -- [{field, label, current_value, corrected_value, source_url}]
   contact_name  text,
   contact_email text,                  -- stored lowercase for lookup
-  contact_role  text,
-  contact_org   text,
+  contact_role  text,                  -- unused since the volunteer-hours feature was removed
+  contact_org   text,                  -- unused (kept so existing rows keep their data)
   created_at    timestamptz default now()
 );
 

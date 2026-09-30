@@ -13,7 +13,7 @@ type Info = {
   lead: string; history: string; academics: string; athletics: string;
   alumni: string; sources: string;
 };
-type Contact = { name: string; email: string; role: string; org: string; consent: boolean };
+type Contact = { name: string; email: string };
 
 // A pasted reference link the contributor wants us to cite.
 type SourceLink = { url: string; kind: string; note: string };
@@ -24,9 +24,8 @@ type Flags = Partial<Record<keyof Info, FlagState>>;
 type FactFlag = { field: string; label: string; current_value: string; corrected_value: string; source_url: string };
 type Saved = { school: School; facts: Info | null; sources: SourceLink[]; flags: FactFlag[]; contact?: Contact; at: string };
 
-const ROLES = ["Student", "Alumni", "Teacher / staff", "Parent", "Community member", "Other"];
 const LEVEL_WORD: Record<string, string> = { elementary: "elementary", middle: "middle", high: "high" };
-const emptyContact: Contact = { name: "", email: "", role: "Student", org: "", consent: false };
+const emptyContact: Contact = { name: "", email: "" };
 
 // The verifiable, scalar facts we show read-only and let people flag.
 const FACT_FIELDS: { k: keyof Info; label: string }[] = [
@@ -227,8 +226,6 @@ export default function ContributorPanel({ school, onClose }: { school: School; 
         source_links: cleanSources, fact_flags: cleanFlags,
         contact_name: withContact?.name ?? null,
         contact_email: withContact?.email?.trim().toLowerCase() ?? null,
-        contact_role: withContact?.role ?? null,
-        contact_org: withContact?.org ?? null,
       });
       if (error) {
         console.error("Supabase insert failed:", error);
@@ -243,7 +240,7 @@ export default function ContributorPanel({ school, onClose }: { school: School; 
     }
     setSaved(rec); setStep("done");
   }
-  const contactValid = contact.name.trim() && /\S+@\S+\.\S+/.test(contact.email) && contact.consent;
+  const contactValid = /\S+@\S+\.\S+/.test(contact.email);
   const where = [school.ci, school.s].filter(Boolean).join(", ");
 
   return (
@@ -327,25 +324,16 @@ export default function ContributorPanel({ school, onClose }: { school: School; 
         </>
       ) : step === "contact" ? (
         <>
-          <div className="vol-thanks">✓ Contribution recorded for this school.</div>
           <p className="ed-intro">
-            Optionally leave your contact info to receive <b>volunteer hours</b> for
-            this contribution. You can also skip — your input above is saved either way.
+            Almost done. Optionally leave your email so you can find this contribution
+            later under <b>My contributions</b> — or skip and submit anonymously.
           </p>
-          <div className="ed-section-title">Contact <span className="opt">optional</span></div>
-          <L k="Full name"><input value={contact.name} onChange={(e) => setC("name", e.target.value)} placeholder="Jane Doe" /></L>
+          <div className="ed-section-title">Your email <span className="opt">optional</span></div>
+          <L k="Name"><input value={contact.name} onChange={(e) => setC("name", e.target.value)} placeholder="Jane Doe (optional)" /></L>
           <L k="Email"><input type="email" value={contact.email} onChange={(e) => setC("email", e.target.value)} placeholder="jane@example.com" /></L>
-          <div className="ed-grid">
-            <L k="I am a…"><select value={contact.role} onChange={(e) => setC("role", e.target.value)}>{ROLES.map((r) => <option key={r}>{r}</option>)}</select></L>
-            <L k="School / org"><input value={contact.org} onChange={(e) => setC("org", e.target.value)} placeholder="for hour credit" /></L>
-          </div>
-          <label className="vol-consent">
-            <input type="checkbox" checked={contact.consent} onChange={(e) => setC("consent", e.target.checked)} />
-            <span>I agree to be contacted about volunteer hours.</span>
-          </label>
           <div className="vol-actions">
-            <button className="ghost" onClick={() => persist(undefined)}>Skip</button>
-            <button className="cta" disabled={!contactValid} onClick={() => persist(contact)}>Submit & get hours</button>
+            <button className="ghost" onClick={() => persist(undefined)}>Skip &amp; submit</button>
+            <button className="cta" disabled={!contactValid} onClick={() => persist(contact)}>Submit</button>
           </div>
         </>
       ) : (
@@ -355,10 +343,8 @@ export default function ContributorPanel({ school, onClose }: { school: School; 
           <p>
             Your {summarize(saved)} for <b>{school.n}</b> {saved?.at ? `was saved on ${saved.at}` : "was saved"}.
           </p>
-          {saved?.contact ? (
-            <div className="vol-hours">⏱ {saved.contact.name.split(" ")[0]}, you&apos;re eligible for <b>3–5 verified volunteer hours</b> once reviewed. We&apos;ll email <b>{saved.contact.email}</b>.</div>
-          ) : (
-            <div className="vol-hours">No contact left — add it anytime to claim volunteer hours.</div>
+          {saved?.contact?.email && (
+            <p className="ed-hint">Saved with <b>{saved.contact.email}</b> — find it under My contributions.</p>
           )}
           <button className="ed-link-btn" onClick={() => setStep("contribute")}>Edit my contribution</button>
         </div>

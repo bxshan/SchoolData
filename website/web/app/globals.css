@@ -255,16 +255,7 @@ a { color: var(--accent); text-decoration: none; }
 .src-note { font-size: 12.5px; }
 .src-add { align-self: flex-start; padding: 6px 14px; font-size: 12.5px; margin-top: 2px; }
 
-.vol-consent { display: flex; align-items: flex-start; gap: 9px; margin-top: 14px;
-  font-size: 12.5px; color: var(--ink); line-height: 1.4; }
-.vol-consent input { width: auto; margin-top: 1px; accent-color: var(--accent); }
 
-.vol-summary { background: #f5f5f7; border: 1px solid var(--border);
-  border-radius: 12px; padding: 12px 14px; margin-bottom: 18px; }
-.vol-summary-h { display: flex; justify-content: space-between; font-size: 11px;
-  font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
-  color: var(--muted); margin-bottom: 7px; }
-.vol-summary p { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink); }
 
 .vol-confirm { text-align: center; padding: 14px 4px; }
 .vol-check { width: 52px; height: 52px; border-radius: 50%; margin: 8px auto 14px;
@@ -272,19 +263,9 @@ a { color: var(--accent); text-decoration: none; }
   display: flex; align-items: center; justify-content: center; }
 .vol-confirm h3 { margin: 0 0 8px; font-size: 18px; font-weight: 600; }
 .vol-confirm p { font-size: 13.5px; color: var(--ink); line-height: 1.6; margin: 0 0 14px; }
-.vol-hours { background: #f5f5f7; border: 1px solid var(--border); border-radius: 12px;
-  padding: 12px 14px; font-size: 13px; color: var(--ink); }
 .ed-link-btn { background: 0; border: 0; color: var(--accent); cursor: pointer;
   font-size: 13px; margin-top: 14px; }
 
-.vol-open { display: flex; flex-direction: column; gap: 3px; width: 100%;
-  text-align: left; margin-top: 20px; cursor: pointer;
-  background: #fff; border: 1px solid var(--border); border-radius: 14px;
-  padding: 13px 15px; color: var(--accent); font-size: 14px; font-weight: 500;
-  box-shadow: var(--shadow); transition: border-color .15s; }
-.vol-open:hover { border-color: var(--accent); }
-.vol-open small { color: var(--muted); font-weight: 400; font-size: 12px; }
-.vol-form { margin-top: 6px; }
 .opt { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--muted);
   background: #f0f0f2; border-radius: 980px; padding: 1px 8px; font-size: 10px; margin-left: 6px; }
 
