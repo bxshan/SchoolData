@@ -21,7 +21,7 @@ Last built 2026-09-29.
 - `bulk_downloads/` — NCES bulk zips (git-ignored)
 - `generate_articles/` — deterministically renders a Wikipedia-style article per
   school from the master (see below)
-- `{public,private}_school_downloads/` — downloaded Excel files (created at run time)
+- `private_school_downloads/` — the scraper's per-state `.xls` files (git-ignored)
 - `output_{public,private,all}_schools/` — master CSVs
 
 ## Usage
@@ -31,6 +31,9 @@ python3 build_from_bulk.py --download        # public master + coordinates (~1 m
 python3 download_schools.py --type private   # private master (~5 min, Chrome)
 python3 combine_all_schools.py               # unified master (stdlib only)
 ```
+
+Or from `data/`: `make nces`, `make private`, and `make` rebuilds the unified
+master whenever either input changes.
 
 To move to a new school year, update `YEAR` and the file URLs in
 `build_from_bulk.py` (listed at https://nces.ed.gov/ccd/files.asp) and
@@ -42,6 +45,8 @@ sector). Grades keep their native encodings — public uses `PK`/`KG`/`01`–`12
 private uses PSS numeric codes; no cross-sector conversion is applied.
 
 ## Output
+
+As of the 2026-09-29 build:
 
 | File | Schools | Columns | Coverage |
 |---|---|---|---|
@@ -101,8 +106,9 @@ one-off run.
 - A full public run takes ~2 h; private ~5 min.
 - Scripts resolve their download/output dirs next to themselves, so they can be
   run from any working directory.
-- Dependencies: `pip install pandas selenium webdriver-manager`
-  (`combine_all_schools.py` and `generate_articles/` need none).
+- Dependencies: `../requirements.txt` (only the scraper needs pandas/selenium;
+  `build_from_bulk.py`, `combine_all_schools.py` and `generate_articles/` are
+  stdlib-only).
 
 ## Author
 

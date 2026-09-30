@@ -1,80 +1,101 @@
-# Wikipedia K-12 School Crawler
+# Wikipedia school articles
 
-Crawls Wikipedia for U.S. K-12 school articles, enriches them, and matches them
-against the NCES master to measure Wikipedia coverage.
+Finds US K-12 school articles on English Wikipedia, verifies that each one really
+is a school, enriches it with Wikipedia/Wikidata facts, and fetches the article
+text for those that match an NCES school. Matching itself lives in
+[`../data_publish/match_wiki_nces.py`](../data_publish/match_wiki_nces.py); the
+whole pipeline is driven by [`../Makefile`](../README.md).
 
-- **Source**: Wikipedia category tree via the MediaWiki API + Wikidata
-- **Goal**: flag which NCES schools have an English Wikipedia article
+## Steps
 
-## Structure
-
-- `crawl_k12_schools.py` — walk the Wikipedia category tree → tagged `schools.csv`
-- `enrich_schools.py` — clean + add state/level/Wikidata QID/coordinates
-- `output/` — all generated CSVs (git-ignored)
-- `tests/` — pytest suite for the crawler
-
-> Matching the clean wiki set against the NCES master moved to
-> `../data_publish/match_wiki_nces.py` (the publish step); it reads this
-> directory's `output/schools_enriched.csv` by default.
-
-## Usage
+| Step | Script | Reads | Writes (in `output/`) | Time |
+|---|---|---|---|---|
+| 1. crawl | `crawl_k12_schools.py` | Wikipedia category tree + Wikidata | `schools.csv` | hours |
+| 2. enrich | `enrich_schools.py` | `schools.csv`, NCES coordinates | `schools_enriched.csv` | ~40 min |
+| 3. match | `../data_publish/match_wiki_nces.py` | `schools_enriched.csv`, NCES master | `../data_publish/output/wiki_nces_matches.csv` | seconds |
+| 4. text | `fetch_article_text.py` | `schools_enriched.csv`, the matches | `wiki_articles.jsonl` | ~1.8 s / article |
 
 ```bash
-# 1. Crawl (all rows, each tagged in a `validation` column; nothing dropped).
-python crawl_k12_schools.py
-
-#    Emit only verified schools directly (CSV-safe):
-python crawl_k12_schools.py --out schools_clean.csv --write-status school
-
-# 2. Enrich → adds state, level, Wikidata QID, lat/lon (keeps `validation`).
-python enrich_schools.py
-
-# 3. Match against NCES → ../data_publish/ (writes there, not here).
-#    Only `validation == school` rows are matched by default.
-python ../data_publish/match_wiki_nces.py
-python ../data_publish/match_wiki_nces.py --statuses school,unverified
+cd ..                      # data/
+make crawl                 # step 1  (python wiki_crawl/crawl_k12_schools.py --include-defunct)
+make enrich                # step 2
+make                       # steps 3-4 and the release, incrementally
 ```
 
-Crawl/enrich read and write in this `output/` by default (a bare `--in`/`--out`
-name resolves there; pass a path with a separator to use another location):
-`output/schools.csv` → `output/schools_enriched.csv`. The match step then reads
-`output/schools_enriched.csv` and writes `data_publish/output/wiki_nces_matches.csv`.
+Scripts read and write `output/` by default (a bare `--in`/`--out` name resolves
+there). All network access goes through `../common/wiki_api.py` (retries,
+429/503 `Retry-After`, `maxlag` backoff, one User-Agent). `crawl` and `enrich`
+take `--proxy http://127.0.0.1:7890`.
 
-Only dependency beyond the standard library is `requests` (`pip install requests`).
-All scripts accept `--proxy http://127.0.0.1:7890` for a local proxy.
+## 1. Crawl — `crawl_k12_schools.py`
 
-## Output (in `output/`)
+Breadth-first walk from 15 seed categories ("Schools in the United States", level-,
+private-, Catholic-, charter-, boarding- …) down to depth 6, entering only
+subcategories named like schools and skipping universities, alumni, sports,
+buildings, "established in YEAR" and similar branches. `--include-defunct` also
+seeds "Defunct schools in the United States" (the release uses it). Candidates
+are de-duplicated by pageid; the run checkpoints and resumes with `--resume`.
 
-| File | Produced by | Contents |
-|---|---|---|
-| `schools.csv` | `crawl_k12_schools.py` | ~23k rows, each tagged in `validation` |
-| `schools_enriched.csv` | `enrich_schools.py` | resolved + state/level/QID/coords + `validation` |
+Every candidate is then tagged from its Wikidata item (`instance_of`, dissolution
+date) — nothing is dropped:
 
-(`wiki_nces_matches.csv` is produced by `../data_publish/match_wiki_nces.py`
-into `data_publish/output/`.)
+| `validation` | Meaning |
+|---|---|
+| `school` | a school type in Wikidata, no dissolution date |
+| `defunct` | a school type with a dissolution date |
+| `out_of_scope` | a school district or higher-education institution |
+| `non_school` | anything else: people, events (school shootings), buildings, … |
+| `unverified` | no Wikidata item or no usable type |
 
-The `validation` column tags every crawled row — `school`, `unverified`,
-`defunct`, `out_of_scope`, or `non_school`. Nothing is dropped at crawl time;
-leaks are **labeled, not removed**, so the clean set is reproduced by filtering
-on `validation == school` (keep `unverified` too while reviewing).
-`enrich_schools.py` carries the tag through, and `match_wiki_nces.py` applies
-that filter itself (`--statuses`, default `school`), so the full tagged crawl can
-be enriched as-is.
+## 2. Enrich — `enrich_schools.py`
 
-Matching is tiered — exact Wikidata NCES-ID → exact name+state → fuzzy name
-similarity within the same state (rapidfuzz, `difflib` fallback). Each NCES
-school is claimed by at most one article (the strongest match wins). The score
-column lets low-confidence rows be reviewed or filtered.
+- **Resolve redirects.** A redirect to another crawled school (a renamed school)
+  collapses onto it. A title that only redirects to its town or district — the
+  school has no article of its own — is kept under its own title as
+  `validation=redirect` with `redirect_to` set, so the town page never poses as
+  a school.
+- **Add facts** from Wikipedia (coordinates, description, 60-day pageviews,
+  thumbnail, categories) and Wikidata (all types, NCES id, district, founded,
+  website, postal code, country, dissolution).
+- **Revalidate** with those signals; every change is explained in
+  `validation_note`:
+  - fill a missing `state` from the description, then from the nearest NCES
+    school to the article's coordinates;
+  - `defunct` for pages in a defunct/former/closed-school category (Wikidata
+    often lacks the dissolution date);
+  - `out_of_scope` for networks/districts, colleges/universities and non-US
+    schools (unless a US state is known — Wikidata's country is sometimes wrong);
+  - `unverified` → `school` when the description names a school;
+  - `operating` = `no` for dissolved, defunct-category, historic-building or
+    "former …" articles, else `yes`.
+
+Output columns: `title, url, pageid, state, level, description, instance_of,
+founded, website, school_district, nces_id, postal_code, wikidata_qid, lat, lon,
+pageviews_60d, thumbnail, source_category, validation, redirect_to,
+defunct_category, country, dissolved, operating, validation_note`.
+
+The matcher uses only `validation=school` rows by default and writes the rest of
+the kept schools, with a reason, to `../data_publish/output/wiki_unmatched.csv`.
+
+## 4. Article text — `fetch_article_text.py`
+
+One request per article (TextExtracts can't batch full extracts): the full body
+as plain text plus the revision id. Trailing sections (References, External
+links, See also, Notes, …) and headings are dropped, whitespace is collapsed, and
+leftover `{{templates}}`, `[[links]]` and `[12]` citation markers are stripped.
+
+```bash
+python fetch_article_text.py --matches ../data_publish/output/wiki_nces_matches.csv
+python fetch_article_text.py --reclean     # re-apply cleaning after a fix, no refetch
+```
+
+The output doubles as the checkpoint: pages already present are skipped, so a
+re-run after new matches fetches only the new articles. Each line:
+`{pageid, title, url, revid, text, chars, fetched_at}`.
 
 ## Notes
 
-- **Filter with a CSV-aware tool** — never `awk -F,`. School titles contain commas
-  (e.g. `"... High School (Cedar Rapids, Iowa)"`) and a naive split silently drops
-  real schools. CSV-safe one-liner to filter an existing `schools.csv`:
-  ```bash
-  python -c "import csv,sys; r=csv.DictReader(open('schools.csv')); \
-  w=csv.DictWriter(sys.stdout,fieldnames=r.fieldnames); w.writeheader(); \
-  [w.writerow(x) for x in r if x['validation']=='school']" > schools_clean.csv
-  ```
-- The crawler prunes off-topic branches (universities, alumni, sports, buildings,
-  "established in YEAR", …) to stay on K-12; results are de-duplicated by pageid.
+- Filter the CSVs with a CSV-aware tool, never `awk -F,`: titles contain commas
+  (`"… High School (Cedar Rapids, Iowa)"`).
+- Tests: `python -m pytest -m "not integration" tests` (the one integration test
+  calls the live API).

@@ -44,7 +44,7 @@ Wikipedia categories ─ crawl_k12_schools ─▶ schools.csv (validation-tagged
 | [`nces_crawl/`](nces_crawl/README.md) | NCES masters, coordinates, NCES article generator | `output_all_schools/all_schools_master.csv`, `school_coordinates.csv` |
 | [`wiki_crawl/`](wiki_crawl/README.md) | find, verify and enrich Wikipedia school articles; fetch their text | `output/schools_enriched.csv`, `output/wiki_articles.jsonl` |
 | `data_publish/` | match articles to NCES schools; build, validate and document the release | `output/wiki_nces_matches.csv`, `output/dist/` |
-| `common/` | shared code (state names/codes/FIPS) | — |
+| `common/` | shared code: state names/codes/FIPS, the Wikipedia/Wikidata API client | — |
 
 `data_publish/README.md` is the **dataset card template** (what Hugging Face
 shows), not developer documentation: `prep_data_publish.py` fills its
