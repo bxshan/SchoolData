@@ -59,9 +59,9 @@ SCHOOLISH = re.compile(r"school|academ|yeshiv|institute|seminary|montessori", re
 ENRICHED_FIELDS = ["title", "url", "pageid", "state", "level", "description",
                    "instance_of", "founded", "website", "school_district",
                    "nces_id", "postal_code", "wikidata_qid", "lat", "lon",
-                   "pageviews_60d", "thumbnail", "source_category", "validation",
-                   "redirect_to", "defunct_category", "country", "dissolved",
-                   "operating", "validation_note"]
+                   "pageviews_60d", "thumbnail", "source_category", "lead",
+                   "crawl_validation", "validation", "redirect_to", "defunct_category",
+                   "country", "dissolved", "operating", "validation_note"]
 ACCREDITATION = re.compile(r"accredit|commission on|association of", re.I)
 
 
@@ -125,7 +125,8 @@ def resolve_and_enrich(session, rows, delay):
             "action": "query",
             "titles": "|".join(batch),
             "redirects": "1",
-            "prop": "info|coordinates|pageprops|categories|description|pageviews|pageimages",
+            "prop": "info|coordinates|pageprops|categories|description|pageviews|pageimages|extracts",
+            "exintro": "1", "explaintext": "1", "exsentences": "1", "exlimit": "max",
             "ppprop": "wikibase_item",
             "coprop": "lat|lon",
             "colimit": "max",
@@ -147,6 +148,8 @@ def resolve_and_enrich(session, rows, delay):
                 acc = pages.setdefault(p["title"], p)
                 if acc is not p:
                     acc.setdefault("categories", []).extend(p.get("categories", []))
+                    if p.get("extract") and not acc.get("extract"):
+                        acc["extract"] = p["extract"]
             if "continue" in data:
                 cont = data["continue"]
             else:
@@ -215,6 +218,8 @@ def resolve_and_enrich(session, rows, delay):
                 "thumbnail": thumb,
                 "source_category": sc,
                 "validation": val.get(orig, ""),
+                "crawl_validation": val.get(orig, ""),
+                "lead": re.sub(r"\s+", " ", page.get("extract") or "").strip()[:400],
                 "redirect_to": "",
                 "defunct_category": defunct_category(
                     [sc] + [c["title"] for c in page.get("categories", [])]),
@@ -240,6 +245,7 @@ def _redirect_record(title, pageid, target, source_category):
         "level": level_of(title + " | " + source_category),
         "source_category": source_category,
         "validation": "redirect",
+        "crawl_validation": "redirect",
         "redirect_to": target,
     })
     return rec
@@ -360,7 +366,29 @@ HIGHER_ED = re.compile(
 # merely mentions its district ("Public high school in the X school district").
 NETWORK = re.compile(
     r"^(?:\S+\s+){0,3}?(network|district|school system|organization|"
-    r"organisation|board of education|group of schools)\b", re.I)
+    r"organisation|board of education|group of schools)\b(?!\s+(?:school|high|academy))",
+    re.I)
+# Wikidata types that make an item a K-12 school, whatever else it is typed as.
+K12_TYPE = re.compile(
+    r"\b(high|middle|elementary|primary|secondary|junior high|senior high|charter|"
+    r"public|private|boarding|magnet|preparatory|parochial|catholic|montessori|"
+    r"k-12|early college high|comprehensive)\s+school\b", re.I)
+# A title naming one school ("... High School", "... Academy"), not a system ("... Schools").
+SINGLE_SCHOOL_TITLE = re.compile(r"\b(school|academy|institute)\b(?!s)", re.I)
+# First sentence tense: "X is a public high school" vs "X was a public high school".
+_LEAD_IS = re.compile(r"^[^.]{0,200}?\b(is|are)\s+(an?|the)\b", re.I)
+_LEAD_WAS = re.compile(r"^[^.]{0,200}?\b(was|were)\s+(an?|the)\b", re.I)
+_LEAD_FORMER = re.compile(r"\b(is|are)\s+(an?|the)\s+(former|historic|defunct|closed)\b", re.I)
+
+
+def lead_tense(lead):
+    """'present' for "X is a ... school", 'past' for "X was a ...", else ''."""
+    lead = lead or ""
+    if _LEAD_IS.search(lead) and not _LEAD_FORMER.search(lead):
+        return "present"
+    if _LEAD_WAS.search(lead) or _LEAD_FORMER.search(lead):
+        return "past"
+    return ""
 # Building-only Wikidata types. A school also typed "high school", "public
 # school", ... is an operating school whose building happens to be listed.
 BUILDING_P31 = re.compile(
@@ -426,6 +454,10 @@ def revalidate(records, locator=None):
     for rec in records.values():
         desc, inst = rec.get("description", ""), rec.get("instance_of", "")
         notes = []
+        if rec.get("crawl_validation"):
+            rec["validation"] = rec["crawl_validation"]      # idempotent re-runs
+        tense = lead_tense(rec.get("lead"))
+        k12 = bool(K12_TYPE.search(inst))
 
         # 1. state: Wikidata description ("school in Talladega, Alabama"), then coords
         if not rec["state"]:
@@ -437,11 +469,17 @@ def revalidate(records, locator=None):
                 notes.append("state from " + ("description" if state_of(desc) else "coordinates"))
                 changes["state_filled"] += 1
 
-        # 2. operating: no when dissolved, a historic building type, or described as former
+        # 2. operating. The article's own first sentence decides when it can:
+        #    "X is a ... school" is open whatever its categories say (articles on
+        #    a current school often also carry a closed predecessor's category),
+        #    "X was a ..." is closed. Otherwise fall back to Wikidata/categories.
         if rec["validation"] not in ("redirect",):
-            closed = (rec.get("dissolved") or building_only(inst)
-                      or FORMER_DESC.search(desc) or rec.get("defunct_category")
-                      or rec["validation"] == "defunct")
+            if tense:
+                closed = tense == "past"
+            else:
+                closed = (rec.get("dissolved") or building_only(inst)
+                          or FORMER_DESC.search(desc) or rec.get("defunct_category")
+                          or rec["validation"] == "defunct")
             rec["operating"] = "no" if closed else "yes"
 
         # 3. validation fixes
@@ -451,16 +489,23 @@ def revalidate(records, locator=None):
                 and not rec["state"]:
             rec["validation"] = "out_of_scope"
             notes.append(f"foreign ({rec['country']})")
-        elif v == "school" and (HIGHER_ED.search(desc) or HIGHER_ED.search(inst)) \
+        elif v == "school" and not k12 and (HIGHER_ED.search(desc) or HIGHER_ED.search(inst)) \
                 and not SCHOOLISH_DESC.search(desc.replace("college prep", "")):
             rec["validation"] = "out_of_scope"
             notes.append("higher education")
-        elif v == "school" and NETWORK.search(desc):
+        elif v == "school" and NETWORK.search(desc) \
+                and not (k12 and SINGLE_SCHOOL_TITLE.search(rec["title"])):
+            # A single-school district ("Lenape Valley Regional High School" is
+            # described as "School district in Sussex County") stays a school.
             rec["validation"] = "out_of_scope"
             notes.append("network/district: " + NETWORK.search(desc).group(0))
-        elif v == "school" and rec.get("defunct_category"):
+        elif v == "school" and rec.get("defunct_category") and tense != "present":
             rec["validation"] = "defunct"
             notes.append(f"in a closed-school category: {rec['defunct_category']}")
+        elif v in ("out_of_scope", "non_school", "defunct") and k12 and tense == "present" \
+                and SINGLE_SCHOOL_TITLE.search(rec["title"]) and not NETWORK.search(desc):
+            rec["validation"] = "school"
+            notes.append(f"rescued: K-12 type and the article says it is a school (crawl: {v})")
         elif v == "unverified" and rec["wikidata_qid"] and SCHOOLISH_DESC.search(desc) \
                 and not NETWORK.search(desc) and not HIGHER_ED.search(desc):
             rec["validation"] = "school"
@@ -480,6 +525,14 @@ def _out(name):
     return name if os.path.dirname(name) else os.path.join(OUT_DIR, name)
 
 
+def write_enriched(path, records):
+    with open(path, "w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=ENRICHED_FIELDS, extrasaction="ignore")
+        w.writeheader()
+        for rec in sorted(records.values(), key=lambda r: (r["state"], r["title"])):
+            w.writerow(rec)
+
+
 def main():
     ap = argparse.ArgumentParser(description="Clean + enrich K-12 school crawl.")
     ap.add_argument("--in", dest="inp", default="schools.csv")
@@ -492,6 +545,9 @@ def main():
     ap.add_argument("--nces-coords", default=os.path.join(nces_out, "school_coordinates.csv"),
                     help="NCES school coordinates used to infer a missing state; '' disables")
     ap.add_argument("--nces-master", default=os.path.join(nces_out, "all_schools_master.csv"))
+    ap.add_argument("--revalidate-only", action="store_true",
+                    help="re-run revalidate() on the existing --out file (after a "
+                         "rule change) without any network access, then exit")
     ap.add_argument("--no-wikidata", action="store_true",
                     help="skip the Wikidata pass (type/founded/website/district/NCES/postal)")
     args = ap.parse_args()
@@ -499,6 +555,16 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     args.inp = _out(args.inp)
     args.out = _out(args.out)
+    locator = (NcesLocator(args.nces_coords, args.nces_master)
+               if args.nces_coords and os.path.exists(args.nces_coords) else None)
+
+    if args.revalidate_only:
+        with open(args.out, newline="", encoding="utf-8") as fh:
+            records = {i: r for i, r in enumerate(csv.DictReader(fh))}
+        changes = revalidate(records, locator)
+        sys.stderr.write(f"revalidated {len(records):,} rows offline: {dict(changes)}\n")
+        write_enriched(args.out, records)
+        return
 
     rows = list(csv.DictReader(open(args.inp, encoding="utf-8")))
     sys.stderr.write(f"loaded {len(rows)} rows from {args.inp}\n")
@@ -514,17 +580,9 @@ def main():
     records = resolve_and_enrich(session, rows, args.delay)
     if not args.no_wikidata:
         enrich_wikidata(session, records, args.delay)
-    locator = (NcesLocator(args.nces_coords, args.nces_master)
-               if args.nces_coords and os.path.exists(args.nces_coords) else None)
     changes = revalidate(records, locator)
     sys.stderr.write(f"revalidated: {dict(changes)}\n")
-
-    fields = ENRICHED_FIELDS
-    with open(args.out, "w", newline="", encoding="utf-8") as fh:
-        w = csv.DictWriter(fh, fieldnames=fields)
-        w.writeheader()
-        for rec in sorted(records.values(), key=lambda r: (r["state"], r["title"])):
-            w.writerow(rec)
+    write_enriched(args.out, records)
 
     # quick stats
     n = len(records)

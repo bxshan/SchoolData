@@ -146,3 +146,54 @@ def test_defunct_category_returns_the_category_for_auditing():
                                "Category:Educational institutions disestablished in 1999"]) \
         == "Category:Educational institutions disestablished in 1999"
     assert e.defunct_category(["Category:Schools in Ohio"]) == ""
+
+
+def test_lead_tense():
+    assert e.lead_tense("Troy High School is a public high school in Troy, Ohio.") == "present"
+    assert e.lead_tense("Blue School was a progressive school in New York City.") == "past"
+    assert e.lead_tense("Evergreen School is a historic school building in Alabama.") == "past"
+    assert e.lead_tense("") == ""
+
+
+def test_present_tense_lead_overrides_a_predecessor_defunct_category():
+    # Manhattan Center for Science and Mathematics sits in "Defunct high schools
+    # in Manhattan" (its predecessor's category) but is open.
+    r = _reval(defunct_category="Category:Defunct high schools in Manhattan",
+               lead="Manhattan Center for Science and Mathematics is a public high school in East Harlem.")
+    assert r["validation"] == "school" and r["operating"] == "yes"
+    r = _reval(defunct_category="Category:Defunct high schools in Manhattan",
+               lead="Benjamin Franklin High School was a public high school in East Harlem.")
+    assert r["validation"] == "defunct" and r["operating"] == "no"
+
+
+def test_single_school_district_stays_a_school():
+    r = _reval(title="Lenape Valley Regional High School", instance_of="high school",
+               description="School district in Sussex County, New Jersey, US")
+    assert r["validation"] == "school"
+    assert _reval(title="Atlas Schools", instance_of="school",
+                  description="Charter school network in Colorado Springs")["validation"] == "out_of_scope"
+
+
+def test_network_school_is_not_a_network():
+    assert _reval(title="Detroit Cristo Rey High School", instance_of="high school",
+                  description="Private, cristo rey network school in Wayne County")["validation"] == "school"
+
+
+def test_middle_college_high_school_is_not_higher_ed():
+    assert _reval(title="Grossmont Middle College High School", instance_of="high school|public school",
+                  description="Middle college in El Cajon, California")["validation"] == "school"
+
+
+def test_rescue_crawl_misfiled_school_with_present_lead():
+    r = _reval(title="Gilroy Early College Academy", crawl_validation="out_of_scope",
+               validation="out_of_scope", instance_of="early college high school",
+               lead="Gilroy Early College Academy is a public high school in Gilroy, California.")
+    assert r["validation"] == "school" and "rescued" in r["validation_note"]
+
+
+def test_revalidate_is_idempotent_from_crawl_tag():
+    rec = _rec(crawl_validation="school", description="Private university in Alabama")
+    recs = {1: rec}
+    e.revalidate(recs); first = dict(recs[1])
+    e.revalidate(recs)
+    assert recs[1]["validation"] == first["validation"] == "out_of_scope"

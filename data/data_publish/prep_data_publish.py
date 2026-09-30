@@ -322,8 +322,10 @@ def main():
     ap.add_argument("--matches", default=DEFAULT_MATCHES, help="wiki<->NCES match CSV")
     ap.add_argument("--wiki-text", default=DEFAULT_WIKI_TEXT,
                     help="Wikipedia text JSONL from fetch_article_text.py")
-    ap.add_argument("--min-chars", type=int, default=200,
-                    help="shorter Wikipedia texts fall back to NCES text (default 200)")
+    ap.add_argument("--min-chars", type=int, default=40,
+                    help="shorter Wikipedia texts fall back to NCES text (default 40: "
+                         "one-sentence stubs like 'Parma High School is a high school "
+                         "in Parma, Idaho.' are real articles)")
     ap.add_argument("--state", help="build a single-state slice (2-letter code)")
     ap.add_argument("--skip-match", action="store_true",
                     help="NCES-only build: no Wikipedia join, every row CC0")
