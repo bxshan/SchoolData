@@ -66,7 +66,7 @@ $(WIKITEXT): $(MATCHES) wiki_crawl/fetch_article_text.py
 # --- Release ----------------------------------------------------------------
 $(DIST): $(MASTER) $(MATCHES) $(WIKITEXT) data_publish/prep_data_publish.py \
          data_publish/README.md data_publish/CHANGELOG.md \
-         nces_crawl/generate_articles/generate_article.py
+         nces_crawl/generate_article.py
 	$(PY) data_publish/prep_data_publish.py
 
 release: $(DIST)

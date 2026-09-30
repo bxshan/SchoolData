@@ -3,7 +3,7 @@
 """Deterministically render a Wikipedia-style plaintext article for a US K-12
 school using ALL available NCES metadata.
 
-Reads the full 85-column NCES master (../output_all_schools/
+Reads the full 85-column NCES master (output_all_schools/
 all_schools_master.csv) — not the trimmed schools.json — so it can use every
 descriptive field: location + county, locale, school type, grade range, district,
 enrollment, staffing and ratio, Title I (free/reduced lunch) for public schools,
@@ -58,7 +58,7 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-MASTER = os.path.join(HERE, "..", "output_all_schools",
+MASTER = os.path.join(HERE, "output_all_schools",
                       "all_schools_master.csv")
 
 # Data vintage of each sector's NCES data, used in "As of the <year> school
@@ -66,7 +66,7 @@ MASTER = os.path.join(HERE, "..", "output_all_schools",
 # Update together with build_from_bulk.py when moving to a newer release.
 DATA_YEAR = {"public": "2024-25", "private": "2023-24"}
 
-sys.path.insert(0, os.path.join(HERE, "..", ".."))
+sys.path.insert(0, os.path.join(HERE, ".."))
 from common.states import PROSE_NAME as STATE_NAMES  # noqa: E402  ("the District of Columbia")
 
 # Public CCD `type` labels -> adjective for the lead ("Regular" carries no word).

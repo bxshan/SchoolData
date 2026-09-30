@@ -19,7 +19,7 @@ Last built 2026-09-29.
   kept as a fallback for public ones (slow: ~2 h, see Notes)
 - `combine_all_schools.py` — merges the two masters into the unified all-K-12 master
 - `bulk_downloads/` — NCES bulk zips (git-ignored)
-- `generate_articles/` — deterministically renders a Wikipedia-style article per
+- `generate_article.py` — deterministically renders a Wikipedia-style article per
   school from the master (see below)
 - `private_school_downloads/` — the scraper's per-state `.xls` files (git-ignored)
 - `output_{public,private,all}_schools/` — master CSVs
@@ -37,7 +37,7 @@ master whenever either input changes.
 
 To move to a new school year, update `YEAR` and the file URLs in
 `build_from_bulk.py` (listed at https://nces.ed.gov/ccd/files.asp) and
-`DATA_YEAR` in `generate_articles/generate_article.py`.
+`DATA_YEAR` in `generate_article.py`.
 
 `combine_all_schools.py` normalizes public/private fields to a shared core, adds a
 `sector` column, and preserves all sector-specific columns (blank for the other
@@ -64,7 +64,7 @@ enrollment, teachers, student-teacher ratio, type. Public adds charter status,
 locale, and Title I (free/reduced lunch); private adds enrollment by grade,
 race/ethnicity, religious affiliation, coed status, and associations.
 
-## Article generation (`generate_articles/`)
+## Article generation (`generate_article.py`)
 
 Renders a plain-prose, Wikipedia-style article for any school straight from the
 master — **deterministic** (same record → same text) and **no invented facts**
@@ -73,7 +73,6 @@ including the private-school PSS fields (religious affiliation, coed status,
 race/ethnicity, associations, …).
 
 ```bash
-cd generate_articles
 python generate_article.py --id 010135002667        # one school by NCES id
 python generate_article.py --name "A C Moore Primary School"
 python generate_article.py --demo --year 2022-23      # override the data vintage
@@ -107,5 +106,5 @@ one-off run.
 - Scripts resolve their download/output dirs next to themselves, so they can be
   run from any working directory.
 - Dependencies: `../requirements.txt` (only the scraper needs pandas/selenium;
-  `build_from_bulk.py`, `combine_all_schools.py` and `generate_articles/` are
+  `build_from_bulk.py`, `combine_all_schools.py` and `generate_article.py` are
   stdlib-only).

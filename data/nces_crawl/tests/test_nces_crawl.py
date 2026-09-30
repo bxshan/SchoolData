@@ -6,7 +6,6 @@ from pathlib import Path
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(HERE, ".."))
-sys.path.insert(0, os.path.join(HERE, "..", "generate_articles"))
 import combine_all_schools as c
 import generate_article as ga
 

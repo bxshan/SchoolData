@@ -59,7 +59,7 @@ DEFAULT_MATCHES = os.path.join(OUT_DIR, "wiki_nces_matches.csv")
 DEFAULT_WIKI_TEXT = os.path.join(HERE, "..", "wiki_crawl", "output", "wiki_articles.jsonl")
 CARD_FILES = ("README.md", "CHANGELOG.md", "LICENSE")
 
-sys.path.insert(0, os.path.join(HERE, "..", "nces_crawl", "generate_articles"))
+sys.path.insert(0, os.path.join(HERE, "..", "nces_crawl"))
 from generate_article import DATA_YEAR, render_article  # noqa: E402
 sys.path.insert(0, os.path.join(HERE, ".."))
 from common.states import USPS_TO_NAME  # noqa: E402
