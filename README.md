@@ -32,10 +32,11 @@ back on the public record — so no school is left off the map.
 ## Implementation stages
 
 ### 1 · Establish the ground truth — federal data
-Pull the full **NCES** directory (Common Core of Data for ~102k public schools +
-Private School Survey for ~20k private schools) via the Urban Institute Education
-Data API. For each school we capture location, district, grade span, enrollment,
-teaching staff (→ student–teacher ratio), charter/magnet status, and phone.
+Build the full **NCES** directory — the Common Core of Data bulk files for ~100k
+public schools and the Private School Survey for ~22k private schools, with NCES's
+own coordinates. For each school we capture location, district, grade span,
+enrollment, teaching staff (→ student–teacher ratio), charter status, and phone.
+See [`data/`](data/README.md).
 
 ### 2 · Measure the gap — Wikipedia coverage
 Crawl the Wikipedia school-article category tree, then match articles back to NCES

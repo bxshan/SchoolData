@@ -28,8 +28,8 @@ events.out.tfevents.*
 # Logs
 *.log
 
-# Regenerable pipeline outputs (canonical copies of the wiki/match CSVs live in
-# website/data/; the HF dataset is published to Hugging Face, not git)
+# Regenerable pipeline outputs (rebuilt by `make` in data/; the HF dataset is
+# published to Hugging Face, not git)
 data/nces_crawl/public_school_downloads/
 data/nces_crawl/private_school_downloads/
 data/nces_crawl/bulk_downloads/

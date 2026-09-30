@@ -24,10 +24,7 @@ database to draw the map.
 website/
 ├── pipeline/                 # Python — runs locally / on your workstation
 │   ├── build_dataset.py      #  NCES master + coordinates + matches
-│   │                         #  -> web/public/data/schools.json (+ coverage JSON)
-│   └── geocode_private.py    #  legacy (Census geocoding; --urban path only)
-├── data/                     # legacy intermediate artifacts (June 2026 crawl)
-│   └── schools_map.html      #  standalone state choropleth (no build needed)
+│                             #  -> web/public/data/schools.json (+ coverage JSON)
 └── web/                      # Next.js + Deck.gl + MapLibre frontend (deploy to Vercel)
     ├── app/                  #  app router pages
     ├── components/SchoolMap.tsx
@@ -56,7 +53,6 @@ python build_dataset.py --reflag   # only re-flag has_wikipedia from new matches
 `build_dataset.py` reads `../../data/nces_crawl/output_all_schools/` (the
 all-schools master and `school_coordinates.csv`) and flags `has_wikipedia` by an
 exact join on the NCES id against `../../data/data_publish/output/wiki_nces_matches.csv`.
-`--urban` keeps the older Urban Institute API pull as a fallback.
 
 The data CSVs are stored with Git LFS (`brew install git-lfs; git lfs install`);
 `web/public/data/*.json` stays in plain git because Vercel serves it directly.
