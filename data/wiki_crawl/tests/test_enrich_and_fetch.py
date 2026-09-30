@@ -213,3 +213,60 @@ def test_network_named_in_first_sentence():
                description="Private, cristo rey network school in Wayne County",
                lead="Detroit Cristo Rey High School is a private, coeducational, Roman Catholic high school in Detroit, Michigan, in the Cristo Rey Network.")
     assert r["validation"] == "school"
+
+
+def test_school_in_a_district_is_not_a_district():
+    assert not e.lead_names_network(
+        "Salem High School is a public high school in the Salem City school district.")
+    assert not e.lead_names_network(
+        "Lenape Valley Regional High School is a comprehensive regional public high school "
+        "serving students from Byram and Stanhope, operating as its own school district.")
+    assert e.lead_names_network("Atlas Schools is a public charter school network in Colorado Springs.")
+    assert e.lead_names_network("Noble Schools is a network of charter high schools in Chicago.")
+    assert e.lead_names_network("Fairfax County Public Schools is a school district in Virginia.")
+
+
+def test_network_rule_reads_only_what_the_subject_is():
+    # later sentences don't count
+    assert not e.lead_names_network("Mattoon High School is located in Mattoon, Illinois. "
+                                    "It is a part of the Mattoon Community Unit School District.")
+    assert not e.lead_names_network("Walter Reed Middle School is in Studio City. It is the district's magnet.")
+    # belonging to a district is not being one
+    assert not e.lead_names_network("Indian River High School is a part of the Indian River School District.")
+    # a school-type head noun stops the scan
+    assert not e.lead_names_network("Saginaw Career Complex is a public vocational education center "
+                                    "for Saginaw County, run by the intermediate school district.")
+
+
+def test_district_run_school_and_work_of_an_order_are_schools():
+    assert not e.lead_names_network("Paul Robeson High School is a district-run high school in Philadelphia.")
+    assert not e.lead_names_network("Cristo Rey De La Salle East Bay High School is a work of the "
+                                    "San Francisco New Orleans District of the De La Salle Brothers.")
+
+
+def test_head_noun_is_the_last_noun_of_the_subject_phrase():
+    h = e.lead_head_noun
+    assert h("The Judge Barefoot Sanders Law Magnet is a Dallas Independent School District "
+             "(DISD) magnet high school located in Dallas, Texas.") == "school"
+    assert h("Luella High School is a public institution within the Henry County School System.") == "institution"
+    assert h("Atlas Schools is a public charter school network in Colorado Springs.") == "school network"
+    assert h("YES Prep Public Schools is a network of public charter schools in Houston.") == "network"
+    assert h("Hillsborough County Public Schools is a school district that runs the public schools.") == "school district"
+
+
+def test_initials_do_not_hide_the_tense():
+    assert e.lead_tense("The R. J. Neutra Elementary School is an elementary school on the base.") == "present"
+
+
+def test_first_sentence_beats_a_district_description():
+    r = _reval(title="R.J. Neutra Elementary School", instance_of="school",
+               description="School district in Kings County, California",
+               lead="The R. J. Neutra Elementary School is an elementary school on the Naval Air Station Lemoore.")
+    assert r["validation"] == "school"
+
+
+def test_single_school_district_named_in_the_lead_stays_a_school():
+    r = _reval(title="Wallkill Valley Regional High School", instance_of="high school",
+               lead="Wallkill Valley Regional High School is a four-year public high school "
+                    "and regional school district in Hardyston Township, New Jersey.")
+    assert r["validation"] == "school"

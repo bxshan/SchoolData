@@ -381,16 +381,55 @@ _LEAD_IS = re.compile(r"^[^.]{0,200}?\b(is|are)\s+(an?|the)\b", re.I)
 _LEAD_WAS = re.compile(r"^[^.]{0,200}?\b(was|were)\s+(an?|the)\b", re.I)
 _LEAD_FORMER = re.compile(r"\b(is|are)\s+(an?|the)\s+(former|historic|defunct|closed)\b", re.I)
 _ABBREV_DOT = re.compile(r"\b(St|Ste|Mt|Dr|Jr|Sr|No|Ft|Rev|Msgr|Sen|Gen|Pres)\.", re.I)
-# The article's first sentence calls it a network/system/district of schools.
-NETWORK_LEAD = re.compile(
-    r"\b(is|are)\s+(an?|the)\s+[^.]{0,60}?\b(school network|schools network|"
-    r"network of|charter network|charter management|school system|system of|"
-    r"school district|group of)\b", re.I)
+# What the first sentence says the subject *is*: the head (last) noun of the
+# noun phrase after "is a", cut where a preposition or verb starts.
+#   "a public charter school network in ..."         -> network  (network)
+#   "a public high school in the ... school district" -> school   (school)
+#   "a Dallas ISD magnet high school located in ..."  -> school   (school)
+#   "a network of charter schools"                    -> network  (network)
+_LEAD_SUBJECT = re.compile(r"\b(?:is|are)\s+(?:an?|the)\s+([^.]{0,200})", re.I)
+_NP_END = re.compile(
+    r"\s(?:in|of|on|at|for|from|to|by|with|within|under|near|located|based|"
+    r"headquartered|serving|that|which|who|where|founded|established|operated|"
+    r"run|owned|and\s+(?:is|was))\b", re.I)
+_HEAD_NOUN = re.compile(
+    r"\b(schools?\s+(?:network|district|system|corporation)|charter\s+(?:network|management)|"
+    r"network|system|district|organization|organisation|group|"
+    r"schools?|academy|institute|institution|college|university|seminary|yeshiva|"
+    r"conservatory|center|centre|complex|campus|program|programme)\b(?!-)", re.I)
+_NETWORK_HEADS = re.compile(
+    r"^(schools?\s+(network|district|system|corporation)|charter\s+(network|management)|"
+    r"network|system|district|organi[sz]ation|group)$", re.I)
+# "is a part of the X School District" says where it belongs, not what it is.
+_BELONGS = re.compile(r"^(?:\S+\s+){0,2}?(part|member|campus|division|unit|branch|work|ministry)\s+of\b", re.I)
+
+
+def _lead_clean(lead):
+    lead = _ABBREV_DOT.sub(r"\1", lead or "")
+    lead = re.sub(r"\b([A-Z])\.", r"\1", lead)            # initials: "R. J. Neutra"
+    return re.sub(r"\s*\([^)]*\)", "", lead)               # "(DISD)", "(formerly ...)"
+
+
+def lead_head_noun(lead):
+    """Head noun of what the first sentence says the subject is, or ''."""
+    first = re.split(r"(?<=[.!?])\s", _lead_clean(lead), maxsplit=1)[0]
+    m = _LEAD_SUBJECT.search(first)
+    if not m or _BELONGS.search(m.group(1)):
+        return ""
+    np_ = _NP_END.split(" " + m.group(1), maxsplit=1)[0]
+    heads = _HEAD_NOUN.findall(np_)
+    return heads[-1].lower() if heads else ""
+
+
+def lead_names_network(lead):
+    """True when the first sentence's subject is a network/district/system."""
+    head = lead_head_noun(lead)
+    return bool(head and _NETWORK_HEADS.match(head))
 
 
 def lead_tense(lead):
     """'present' for "X is a ... school", 'past' for "X was a ...", else ''."""
-    lead = _ABBREV_DOT.sub(r"\1", lead or "")
+    lead = _lead_clean(lead)
     if _LEAD_IS.search(lead) and not _LEAD_FORMER.search(lead):
         return "present"
     if _LEAD_WAS.search(lead) or _LEAD_FORMER.search(lead):
@@ -500,11 +539,17 @@ def revalidate(records, locator=None):
                 and not SCHOOLISH_DESC.search(desc.replace("college prep", "")):
             rec["validation"] = "out_of_scope"
             notes.append("higher education")
-        elif v == "school" and NETWORK_LEAD.search(_ABBREV_DOT.sub(r"\1", rec.get("lead") or "")):
+        elif v == "school" and lead_names_network(rec.get("lead")) \
+                and not (k12 and SINGLE_SCHOOL_TITLE.search(rec["title"])):
+            # (single-school districts — "Wallkill Valley Regional High School is
+            # a four-year public high school and regional school district" — stay)
             rec["validation"] = "out_of_scope"
             notes.append("network/district: the article's first sentence says so")
         elif v == "school" and NETWORK.search(desc) \
-                and not (k12 and SINGLE_SCHOOL_TITLE.search(rec["title"])):
+                and not (k12 and SINGLE_SCHOOL_TITLE.search(rec["title"])) \
+                and not (tense == "present" and lead_head_noun(rec.get("lead"))):
+            # (the Wikidata description only decides when the article's first
+            # sentence doesn't say what the subject is)
             # A single-school district ("Lenape Valley Regional High School" is
             # described as "School district in Sussex County") stays a school.
             rec["validation"] = "out_of_scope"
