@@ -270,3 +270,33 @@ def test_single_school_district_named_in_the_lead_stays_a_school():
                lead="Wallkill Valley Regional High School is a four-year public high school "
                     "and regional school district in Hardyston Township, New Jersey.")
     assert r["validation"] == "school"
+
+
+def test_historic_building_vs_historic_school():
+    assert e.lead_tense("Buncombe County Boys' Training School is a historic school building near Asheville.") == "past"
+    assert e.lead_tense("Olney Elementary School is a historic American elementary school in Philadelphia.") == ""
+    assert e.lead_tense("The school is a former Rosenwald school.") == "past"
+
+
+def test_earlier_verb_decides_tense():
+    assert e.lead_tense("X High School was a public school; its building is a museum now.") == "past"
+    assert e.lead_tense("X Academy is a private school that was founded in 1920.") == "present"
+
+
+def test_concept_article_is_not_a_school():
+    r = _reval(title="Ranch school", instance_of="school",
+               lead="A ranch school is a type of school used in rural areas of the Western United States.")
+    assert r["validation"] == "non_school"
+
+
+def test_listed_building_article_is_past():
+    assert e.lead_tense("The Pine Bluffs High School, at the junction of 7th and Elm Sts. in Pine Bluffs, "
+                        "Wyoming, was built in 1929. It was listed on the National Register of Historic "
+                        "Places in 1996.") == "past"
+
+
+def test_concept_article_is_caught_before_rescue():
+    r = _reval(title="Ranch school", crawl_validation="unverified", validation="unverified",
+               instance_of="school", description="Type of school in the Western United States",
+               lead="A ranch school is a type of school used in rural areas of the Western United States.")
+    assert r["validation"] == "non_school"

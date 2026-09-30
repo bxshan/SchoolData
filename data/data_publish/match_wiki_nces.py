@@ -89,6 +89,8 @@ GENERIC = {
     "intermediate", "junior", "senior", "the", "of", "a", "and", "at", "for",
     "prep", "preparatory", "academy", "institute", "center", "centre",
     "es", "ms", "hs", "elem", "sch", "district", "campus", "program", "education",
+    "charter", "community", "public", "virtual", "online", "magnet", "regional",
+    "county", "city", "unified", "union", "free", "center", "centre",
 }
 
 
@@ -257,6 +259,7 @@ def load_nces(path, coords=None):
                 "sector": r["sector"],
                 "state": r["state"].strip().upper(),
                 "city": r["city"].strip().lower(),
+                "county": (r.get("county") or "").strip().lower(),
                 "low_grade": r["low_grade"],
                 "high_grade": r["high_grade"],
                 "norm": norm_name(r["school_name"]),
@@ -481,6 +484,7 @@ class GeoIndex:
 
 
 GEO_MAX_KM = 1.0
+_NYC_BOROUGH_WORDS = {"manhattan", "brooklyn", "queens", "bronx", "staten", "harlem"}
 GEO_MIN_SIMILARITY = 60
 
 
@@ -500,7 +504,8 @@ def _geo(w, wnorm, wcore, wexplicit, geo):
         # A shared *place* word proves nothing nearby ("Wichita Falls High School"
         # vs "Premier HS - Wichita Falls"), so the shared word must not be part
         # of the school's city, and the name cores must be broadly similar.
-        place = set(_city_norm(r["city"]).split())
+        place = (set(_city_norm(r["city"]).split()) | set(_city_norm(r["county"]).split())
+                 | _NYC_BOROUGH_WORDS | set(_city_norm(title_explicit_city(w["title"])).split()))
         if not ((wtoks & r["tokens"]) - place):
             continue
         if fuzz.token_set_ratio(wcore, r["core"]) < GEO_MIN_SIMILARITY:
@@ -546,6 +551,9 @@ def main():
                          "'' disables it")
     ap.add_argument("--unmatched", default="wiki_unmatched.csv",
                     help="where to write kept Wikipedia schools with no match")
+    ap.add_argument("--include-closed", action="store_true",
+                    help="also match articles enrich marked operating=no (closed "
+                         "schools, historic buildings); NCES lists only open schools")
     ap.add_argument("--statuses", default="school",
                     help="comma list of crawl `validation` tags to match "
                          "(default: school; 'all' disables the filter)")
@@ -574,6 +582,11 @@ def main():
         wiki = wiki_all
     elif has_validation:
         wiki = [w for w in wiki_all if w["validation"] in statuses]
+    kept = wiki                                   # reported on, matched or not
+    if not args.include_closed:
+        wiki = [w for w in kept if w.get("operating") != "no"]
+        sys.stderr.write(f"skipped {len(kept) - len(wiki):,} articles about closed schools/"
+                         f"buildings (operating=no; --include-closed to keep)\n")
     else:
         sys.exit(f"{args.wiki} has no `validation` column, so --statuses "
                  f"{args.statuses!r} cannot be applied.\n"
@@ -617,10 +630,11 @@ def main():
                                            "description", "reason"],
                             extrasaction="ignore")
         wr.writeheader()
-        for w in wiki:
+        for w in kept:
             if w["pageid"] in matched_pages:
                 continue
-            reason = "lost_nces_conflict" if w["pageid"] not in unmatched else unmatched_reason(w)
+            reason = ("lost_nces_conflict" if w["pageid"] not in unmatched
+                      and w.get("operating") != "no" else unmatched_reason(w))
             reasons[reason] += 1
             wr.writerow({**w, "reason": reason})
 

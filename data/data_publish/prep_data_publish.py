@@ -166,7 +166,7 @@ _OPENING_WAS = re.compile(r"^[^.]{0,200}?\b(was|were)\s+(a|an|the)\b", re.I)
 _OPENING_IS = re.compile(r"^[^.]{0,200}?\b(is|are)\s+(a|an|the)\b", re.I)
 
 
-_ABBREV_DOT = re.compile(r"\b(St|Ste|Mt|Dr|Jr|Sr|No|Ft|Rev|Msgr|Sen|Gen|Pres)\.", re.I)
+_ABBREV_DOT = re.compile(r"\b(St|Sts|Ste|Mt|Dr|Jr|Sr|No|Ft|Rev|Msgr|Sen|Gen|Pres|Ave|Blvd|Rd|Hwy|Co|Inc|Corp|Bros)\.", re.I)
 
 
 def describes_closed_school(text):

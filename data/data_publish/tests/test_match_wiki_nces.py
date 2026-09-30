@@ -209,3 +209,15 @@ def test_nces_id_pointing_at_a_different_level_is_rejected(nces):
               pub("010000000002", "Bailey Magnet High School", "jackson", "09", "12"))
     rec, method, _ = match(wiki("Bailey Magnet High School", nces_id="010000000001"), db)
     assert (rec["school_id"], method) == ("010000000002", "name_state")
+
+
+def test_geo_ignores_county_borough_and_generic_words(nces):
+    by_id, by_state, idx = nces(pub("1", "West Buncombe Elementary", "asheville", "KG", "04", state="NC"),
+                                pub("2", "Lower Manhattan Community Middle School", "new york", "06", "08", state="NY"))
+    by_id["1"].update(lat=35.60, lon=-82.55, county="buncombe county")
+    by_id["2"].update(lat=40.71, lon=-74.01)
+    geo = m.GeoIndex(by_id.values())
+    w1 = {**wiki("Buncombe County Boys' Training School", state="North Carolina"), "lat": "35.60", "lon": "-82.55"}
+    w2 = {**wiki("Léman Manhattan Preparatory School", state="New York"), "lat": "40.71", "lon": "-74.01"}
+    assert m.match_one(w1, by_id, by_state, idx, 88.0, defaultdict(int), geo) is None
+    assert m.match_one(w2, by_id, by_state, idx, 88.0, defaultdict(int), geo) is None

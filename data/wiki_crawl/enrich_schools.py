@@ -379,8 +379,19 @@ SINGLE_SCHOOL_TITLE = re.compile(r"\b(school|academy|institute)\b(?!s)", re.I)
 # First sentence tense: "X is a public high school" vs "X was a public high school".
 _LEAD_IS = re.compile(r"^[^.]{0,200}?\b(is|are)\s+(an?|the)\b", re.I)
 _LEAD_WAS = re.compile(r"^[^.]{0,200}?\b(was|were)\s+(an?|the)\b", re.I)
-_LEAD_FORMER = re.compile(r"\b(is|are)\s+(an?|the)\s+(former|historic|defunct|closed)\b", re.I)
-_ABBREV_DOT = re.compile(r"\b(St|Ste|Mt|Dr|Jr|Sr|No|Ft|Rev|Msgr|Sen|Gen|Pres)\.", re.I)
+# Past without "was": "is a former/defunct/closed ...", or "is a historic
+# ... building/schoolhouse/site" (a listed building, not a running school).
+# A bare "is a historic elementary school" is left undecided: many open
+# schools are listed buildings too (Olney Elementary School, Philadelphia).
+_LEAD_FORMER = re.compile(
+    r"\b(is|are)\s+(an?|the)\s+(former|defunct|closed|"
+    r"historic\b[^.]{0,60}?\b(building|schoolhouse|site|structure|district))\b", re.I)
+_LEAD_BUILT = re.compile(r"\b(was|were)\s+(built|constructed|erected|designed)\b", re.I)
+_LEAD_LISTED = re.compile(r"National Register|historic", re.I)
+_LEAD_HISTORIC_SCHOOL = re.compile(r"\b(is|are)\s+(an?|the)\s+historic\b", re.I)
+# Concept articles: "A ranch school is a type of school used in ..."
+_LEAD_CONCEPT = re.compile(r"\b(is|are)\s+(an?|the)\s+(type|kind|form|style|model)\s+of\b", re.I)
+_ABBREV_DOT = re.compile(r"\b(St|Sts|Ste|Mt|Dr|Jr|Sr|No|Ft|Rev|Msgr|Sen|Gen|Pres|Ave|Blvd|Rd|Hwy|Co|Inc|Corp|Bros)\.", re.I)
 # What the first sentence says the subject *is*: the head (last) noun of the
 # noun phrase after "is a", cut where a preposition or verb starts.
 #   "a public charter school network in ..."         -> network  (network)
@@ -430,11 +441,19 @@ def lead_names_network(lead):
 def lead_tense(lead):
     """'present' for "X is a ... school", 'past' for "X was a ...", else ''."""
     lead = _lead_clean(lead)
-    if _LEAD_IS.search(lead) and not _LEAD_FORMER.search(lead):
-        return "present"
-    if _LEAD_WAS.search(lead) or _LEAD_FORMER.search(lead):
+    first = re.split(r"(?<=[.!?])\s", lead, maxsplit=1)[0]
+    if _LEAD_FORMER.search(first):
         return "past"
-    return ""
+    # A listed building: "The Pine Bluffs High School, at 7th and Elm, was built
+    # in 1929. It was listed on the National Register of Historic Places ..."
+    if _LEAD_BUILT.search(first) and _LEAD_LISTED.search(lead):
+        return "past"
+    is_, was = _LEAD_IS.search(first), _LEAD_WAS.search(first)
+    if was and (not is_ or was.start(1) < is_.start(1)):   # the earlier verb decides
+        return "past"
+    if _LEAD_HISTORIC_SCHOOL.search(first):
+        return ""
+    return "present" if is_ else ""
 # Building-only Wikidata types. A school also typed "high school", "public
 # school", ... is an operating school whose building happens to be listed.
 BUILDING_P31 = re.compile(
@@ -531,7 +550,10 @@ def revalidate(records, locator=None):
         # 3. validation fixes
         v = rec["validation"]
         country = (rec.get("country") or "").lower()
-        if v in ("school", "unverified") and country and country not in US_COUNTRIES \
+        if v in ("school", "unverified") and _LEAD_CONCEPT.search(_lead_clean(rec.get("lead"))):
+            rec["validation"] = "non_school"
+            notes.append("concept article: the first sentence describes a type of school")
+        elif v in ("school", "unverified") and country and country not in US_COUNTRIES \
                 and not rec["state"]:
             rec["validation"] = "out_of_scope"
             notes.append(f"foreign ({rec['country']})")
