@@ -2,6 +2,8 @@
 # SchoolData data pipeline. Run from data/:
 #
 #   make            build the release in data_publish/output/dist/ and validate it
+#   make baseline   validate + compare state by state with the release on Hugging Face
+#   make website    rebuild the map data (../website/web/public/data/*.json)
 #   make test       run every test suite
 #   make status     show which outputs exist and how old they are
 #
@@ -11,6 +13,9 @@
 #
 #   make crawl      re-crawl Wikipedia                  (hours)
 #   make enrich     re-enrich the crawl                 (~40 min)
+#   make leads      re-fetch only the articles' first sentences, then revalidate (~10 min)
+#   make revalidate re-apply wiki_crawl/revalidate_rules.py offline (seconds; also
+#                   automatic whenever that file changes)
 #   make private    re-scrape NCES private schools      (~5 min, needs Chrome)
 #   make nces       re-download NCES bulk files and rebuild the public master
 #
@@ -27,9 +32,12 @@ CRAWL    := wiki_crawl/output/schools.csv
 ENRICHED := wiki_crawl/output/schools_enriched.csv
 MATCHES  := data_publish/output/wiki_nces_matches.csv
 WIKITEXT := wiki_crawl/output/wiki_articles.jsonl
+REVALID  := wiki_crawl/output/.revalidated
 DIST     := data_publish/output/dist/README.md
+SITE     := ../website/web/public/data/schools.json
 
-.PHONY: all release validate test status crawl enrich private nces
+.PHONY: all release validate baseline website test status crawl enrich leads \
+        revalidate private nces
 
 all: validate
 
@@ -55,7 +63,14 @@ $(CRAWL):
 $(ENRICHED): $(CRAWL) | $(MASTER) $(COORDS)
 	$(PY) wiki_crawl/enrich_schools.py
 
-$(MATCHES): $(ENRICHED) $(MASTER) $(COORDS) data_publish/match_wiki_nces.py common/states.py
+# The rules live in their own file so that editing them re-applies them offline
+# (seconds) instead of re-running the network enrich. The stamp is touched
+# after the enriched CSV is rewritten, so it stays the newer of the two.
+$(REVALID): $(ENRICHED) wiki_crawl/revalidate_rules.py common/states.py
+	cd wiki_crawl && $(PY) enrich_schools.py --revalidate-only
+	touch $@
+
+$(MATCHES): $(REVALID) $(MASTER) $(COORDS) data_publish/match_wiki_nces.py common/states.py
 	$(PY) data_publish/match_wiki_nces.py
 
 $(WIKITEXT): $(MATCHES) wiki_crawl/fetch_article_text.py
@@ -65,8 +80,8 @@ $(WIKITEXT): $(MATCHES) wiki_crawl/fetch_article_text.py
 
 # --- Release ----------------------------------------------------------------
 $(DIST): $(MASTER) $(MATCHES) $(WIKITEXT) data_publish/prep_data_publish.py \
-         data_publish/README.md data_publish/CHANGELOG.md \
-         nces_crawl/generate_article.py
+         data_publish/README.md data_publish/CHANGELOG.md data_publish/LICENSE \
+         nces_crawl/generate_article.py common/states.py
 	$(PY) data_publish/prep_data_publish.py
 
 release: $(DIST)
@@ -74,11 +89,27 @@ release: $(DIST)
 validate: $(DIST)
 	$(PY) data_publish/validate_publish.py --expect-rows 120000
 
+baseline: $(DIST)
+	$(PY) data_publish/validate_publish.py --expect-rows 120000 --baseline hf
+
+# --- Website map data -------------------------------------------------------
+$(SITE): $(MASTER) $(COORDS) $(MATCHES) ../website/pipeline/build_dataset.py
+	$(PY) ../website/pipeline/build_dataset.py
+
+website: $(SITE)
+
 # --- Forced rebuilds of the slow steps --------------------------------------
 crawl:
 	$(PY) wiki_crawl/crawl_k12_schools.py --include-defunct
 enrich:
 	$(PY) wiki_crawl/enrich_schools.py
+	touch $(REVALID)
+leads:
+	cd wiki_crawl && $(PY) enrich_schools.py --refresh-leads
+	touch $(REVALID)
+revalidate:
+	cd wiki_crawl && $(PY) enrich_schools.py --revalidate-only
+	touch $(REVALID)
 private:
 	$(PY) nces_crawl/download_schools.py --type private
 nces:
@@ -90,7 +121,8 @@ test:
 
 status:
 	@for f in $(PUBLIC) $(PRIVATE) $(MASTER) $(COORDS) $(CRAWL) $(ENRICHED) \
-	          $(MATCHES) $(WIKITEXT) $(DIST); do \
+	          $(REVALID) $(MATCHES) $(WIKITEXT) $(DIST) $(SITE); do \
 	  if [ -e $$f ]; then printf "  %-62s %s\n" $$f "$$(date -r $$f '+%Y-%m-%d %H:%M')"; \
 	  else printf "  %-62s MISSING\n" $$f; fi; done
-	@echo "stale (would rebuild):"; $(MAKE) -n release 2>/dev/null | grep -E "^$(PY) " | sed 's/^/  /' || true
+	@echo "stale (would rebuild):"; $(MAKE) -n release website 2>/dev/null \
+	  | grep -E "$(PY) " | sed 's/^/  /' || true

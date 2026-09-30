@@ -5,6 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import enrich_schools as e
+import revalidate_rules as rv
 import fetch_article_text as f
 
 
@@ -78,7 +79,7 @@ def _rec(**kw):
 
 def _reval(**kw):
     recs = {1: _rec(**kw)}
-    e.revalidate(recs)
+    rv.revalidate(recs)
     return recs[1]
 
 
@@ -125,7 +126,7 @@ def test_revalidate_fills_state_from_description():
 
 
 def test_defunct_category_detection():
-    hit = lambda cats: bool(e.DEFUNCT_CATEGORY.search(" | ".join(cats)))   # noqa: E731
+    hit = lambda cats: bool(rv.DEFUNCT_CATEGORY.search(" | ".join(cats)))   # noqa: E731
     assert hit(["Category:Defunct high schools in Ohio"])
     assert hit(["Category:Educational institutions disestablished in 1971"])
     # "Former ..." categories hold open schools: former girls' schools, etc.
@@ -142,17 +143,17 @@ def test_school_in_defunct_category_becomes_defunct():
 
 
 def test_defunct_category_returns_the_category_for_auditing():
-    assert e.defunct_category(["Category:Schools in Ohio",
+    assert rv.defunct_category(["Category:Schools in Ohio",
                                "Category:Educational institutions disestablished in 1999"]) \
         == "Category:Educational institutions disestablished in 1999"
-    assert e.defunct_category(["Category:Schools in Ohio"]) == ""
+    assert rv.defunct_category(["Category:Schools in Ohio"]) == ""
 
 
 def test_lead_tense():
-    assert e.lead_tense("Troy High School is a public high school in Troy, Ohio.") == "present"
-    assert e.lead_tense("Blue School was a progressive school in New York City.") == "past"
-    assert e.lead_tense("Evergreen School is a historic school building in Alabama.") == "past"
-    assert e.lead_tense("") == ""
+    assert rv.lead_tense("Troy High School is a public high school in Troy, Ohio.") == "present"
+    assert rv.lead_tense("Blue School was a progressive school in New York City.") == "past"
+    assert rv.lead_tense("Evergreen School is a historic school building in Alabama.") == "past"
+    assert rv.lead_tense("") == ""
 
 
 def test_present_tense_lead_overrides_a_predecessor_defunct_category():
@@ -194,14 +195,14 @@ def test_rescue_crawl_misfiled_school_with_present_lead():
 def test_revalidate_is_idempotent_from_crawl_tag():
     rec = _rec(crawl_validation="school", description="Private university in Alabama")
     recs = {1: rec}
-    e.revalidate(recs); first = dict(recs[1])
-    e.revalidate(recs)
+    rv.revalidate(recs); first = dict(recs[1])
+    rv.revalidate(recs)
     assert recs[1]["validation"] == first["validation"] == "out_of_scope"
 
 
 def test_lead_tense_survives_abbreviations():
-    assert e.lead_tense("St. Mary's School is a Catholic school in Ohio.") == "present"
-    assert e.lead_tense("Dr. Martin Luther King Jr. High School was a public school.") == "past"
+    assert rv.lead_tense("St. Mary's School is a Catholic school in Ohio.") == "present"
+    assert rv.lead_tense("Dr. Martin Luther King Jr. High School was a public school.") == "past"
 
 
 def test_network_named_in_first_sentence():
@@ -216,36 +217,36 @@ def test_network_named_in_first_sentence():
 
 
 def test_school_in_a_district_is_not_a_district():
-    assert not e.lead_names_network(
+    assert not rv.lead_names_network(
         "Salem High School is a public high school in the Salem City school district.")
-    assert not e.lead_names_network(
+    assert not rv.lead_names_network(
         "Lenape Valley Regional High School is a comprehensive regional public high school "
         "serving students from Byram and Stanhope, operating as its own school district.")
-    assert e.lead_names_network("Atlas Schools is a public charter school network in Colorado Springs.")
-    assert e.lead_names_network("Noble Schools is a network of charter high schools in Chicago.")
-    assert e.lead_names_network("Fairfax County Public Schools is a school district in Virginia.")
+    assert rv.lead_names_network("Atlas Schools is a public charter school network in Colorado Springs.")
+    assert rv.lead_names_network("Noble Schools is a network of charter high schools in Chicago.")
+    assert rv.lead_names_network("Fairfax County Public Schools is a school district in Virginia.")
 
 
 def test_network_rule_reads_only_what_the_subject_is():
     # later sentences don't count
-    assert not e.lead_names_network("Mattoon High School is located in Mattoon, Illinois. "
+    assert not rv.lead_names_network("Mattoon High School is located in Mattoon, Illinois. "
                                     "It is a part of the Mattoon Community Unit School District.")
-    assert not e.lead_names_network("Walter Reed Middle School is in Studio City. It is the district's magnet.")
+    assert not rv.lead_names_network("Walter Reed Middle School is in Studio City. It is the district's magnet.")
     # belonging to a district is not being one
-    assert not e.lead_names_network("Indian River High School is a part of the Indian River School District.")
+    assert not rv.lead_names_network("Indian River High School is a part of the Indian River School District.")
     # a school-type head noun stops the scan
-    assert not e.lead_names_network("Saginaw Career Complex is a public vocational education center "
+    assert not rv.lead_names_network("Saginaw Career Complex is a public vocational education center "
                                     "for Saginaw County, run by the intermediate school district.")
 
 
 def test_district_run_school_and_work_of_an_order_are_schools():
-    assert not e.lead_names_network("Paul Robeson High School is a district-run high school in Philadelphia.")
-    assert not e.lead_names_network("Cristo Rey De La Salle East Bay High School is a work of the "
+    assert not rv.lead_names_network("Paul Robeson High School is a district-run high school in Philadelphia.")
+    assert not rv.lead_names_network("Cristo Rey De La Salle East Bay High School is a work of the "
                                     "San Francisco New Orleans District of the De La Salle Brothers.")
 
 
 def test_head_noun_is_the_last_noun_of_the_subject_phrase():
-    h = e.lead_head_noun
+    h = rv.lead_head_noun
     assert h("The Judge Barefoot Sanders Law Magnet is a Dallas Independent School District "
              "(DISD) magnet high school located in Dallas, Texas.") == "school"
     assert h("Luella High School is a public institution within the Henry County School System.") == "institution"
@@ -255,7 +256,7 @@ def test_head_noun_is_the_last_noun_of_the_subject_phrase():
 
 
 def test_initials_do_not_hide_the_tense():
-    assert e.lead_tense("The R. J. Neutra Elementary School is an elementary school on the base.") == "present"
+    assert rv.lead_tense("The R. J. Neutra Elementary School is an elementary school on the base.") == "present"
 
 
 def test_first_sentence_beats_a_district_description():
@@ -273,14 +274,14 @@ def test_single_school_district_named_in_the_lead_stays_a_school():
 
 
 def test_historic_building_vs_historic_school():
-    assert e.lead_tense("Buncombe County Boys' Training School is a historic school building near Asheville.") == "past"
-    assert e.lead_tense("Olney Elementary School is a historic American elementary school in Philadelphia.") == ""
-    assert e.lead_tense("The school is a former Rosenwald school.") == "past"
+    assert rv.lead_tense("Buncombe County Boys' Training School is a historic school building near Asheville.") == "past"
+    assert rv.lead_tense("Olney Elementary School is a historic American elementary school in Philadelphia.") == ""
+    assert rv.lead_tense("The school is a former Rosenwald school.") == "past"
 
 
 def test_earlier_verb_decides_tense():
-    assert e.lead_tense("X High School was a public school; its building is a museum now.") == "past"
-    assert e.lead_tense("X Academy is a private school that was founded in 1920.") == "present"
+    assert rv.lead_tense("X High School was a public school; its building is a museum now.") == "past"
+    assert rv.lead_tense("X Academy is a private school that was founded in 1920.") == "present"
 
 
 def test_concept_article_is_not_a_school():
@@ -290,7 +291,7 @@ def test_concept_article_is_not_a_school():
 
 
 def test_listed_building_article_is_past():
-    assert e.lead_tense("The Pine Bluffs High School, at the junction of 7th and Elm Sts. in Pine Bluffs, "
+    assert rv.lead_tense("The Pine Bluffs High School, at the junction of 7th and Elm Sts. in Pine Bluffs, "
                         "Wyoming, was built in 1929. It was listed on the National Register of Historic "
                         "Places in 1996.") == "past"
 

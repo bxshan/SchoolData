@@ -11,7 +11,7 @@ whole pipeline is driven by [`../Makefile`](../README.md).
 | Step | Script | Reads | Writes (in `output/`) | Time |
 |---|---|---|---|---|
 | 1. crawl | `crawl_k12_schools.py` | Wikipedia category tree + Wikidata | `schools.csv` | hours |
-| 2. enrich | `enrich_schools.py` | `schools.csv`, NCES coordinates | `schools_enriched.csv` | ~40 min |
+| 2. enrich | `enrich_schools.py` + `revalidate_rules.py` | `schools.csv`, NCES coordinates | `schools_enriched.csv` | ~40 min (rules alone: seconds) |
 | 3. match | `../data_publish/match_wiki_nces.py` | `schools_enriched.csv`, NCES master | `../data_publish/output/wiki_nces_matches.csv` | seconds |
 | 4. text | `fetch_article_text.py` | `schools_enriched.csv`, the matches | `wiki_articles.jsonl` | ~1.8 s / article |
 
@@ -57,8 +57,11 @@ date) — nothing is dropped:
 - **Add facts** from Wikipedia (coordinates, description, 60-day pageviews,
   thumbnail, categories) and Wikidata (all types, NCES id, district, founded,
   website, postal code, country, dissolution).
-- **Revalidate** with those signals; every change is explained in
-  `validation_note`:
+- **Revalidate** (`revalidate_rules.py`, re-runnable offline with
+  `--revalidate-only` / `make revalidate`; `--refresh-leads` / `make leads`
+  re-fetches only the first sentences). The article's own first sentence
+  (`lead`) decides first — "X is a ... school" vs "X was a ..."; every change
+  is explained in `validation_note`:
   - fill a missing `state` from the description, then from the nearest NCES
     school to the article's coordinates;
   - `defunct` for pages in a defunct/former/closed-school category (Wikidata

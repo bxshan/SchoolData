@@ -12,6 +12,8 @@ The website map (`../website/`) is built from the same NCES data and matches.
 pip install -r requirements.txt
 brew install git-lfs && git lfs install && git lfs pull   # data CSVs live in LFS
 make            # build data_publish/output/dist/ and validate it
+make baseline   # ... and compare state by state with the release on Hugging Face
+make website    # rebuild the map data in ../website/web/public/data/
 make test       # all test suites (same as: pytest)
 make status     # which outputs exist, and which steps are stale
 ```
@@ -19,7 +21,10 @@ make status     # which outputs exist, and which steps are stale
 `make` rebuilds a step whenever one of its inputs is newer than its output.
 The slow network steps run only when their output is missing; rebuild them on
 purpose with `make crawl` (Wikipedia, hours), `make enrich` (~40 min),
-`make private` (NCES private schools, ~5 min, Chrome) or `make nces`.
+`make leads` (articles' first sentences only, ~10 min), `make private` (NCES
+private schools, ~5 min, Chrome) or `make nces`. The Wikipedia validation rules
+live in `wiki_crawl/revalidate_rules.py`; editing them re-applies them offline
+on the next `make` (or `make revalidate`).
 
 ## Pipeline
 
@@ -69,7 +74,7 @@ ship with the release too.
 ## Releasing
 
 1. `make` — build and validate.
-2. `python data_publish/validate_publish.py --baseline <previous release>` —
-   compare state by state against the last published version.
+2. `make baseline` — compare state by state against the version currently on
+   Hugging Face (downloaded and cached per published commit).
 3. Add a `CHANGELOG.md` entry (inputs, counts, what changed), rebuild.
 4. Upload `data_publish/output/dist/` to the Hugging Face dataset repo.

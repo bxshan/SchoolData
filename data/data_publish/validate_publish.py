@@ -46,6 +46,30 @@ FIELDS = ["nces_id", "name", "state", "sector", "text", "from_wikipedia",
 MARKUP_RE = re.compile(r"\{\{|\}\}|\[\[|\]\]|\[\d+\]")
 
 
+HF_REPO = "SchoolData/us-k12-schools"
+HF_CACHE = os.path.join(HERE, "output", "baseline_hf")
+
+
+def fetch_hf_release(repo=HF_REPO, dest=HF_CACHE):
+    """Download the currently published parquet shards (cached by filename)."""
+    import urllib.request
+    api = f"https://huggingface.co/api/datasets/{repo}"
+    with urllib.request.urlopen(api, timeout=60) as r:
+        info = json.load(r)
+    files = [s["rfilename"] for s in info["siblings"]
+             if s["rfilename"].startswith("data/") and s["rfilename"].endswith(".parquet")]
+    # one cache dir per published commit, so a new release is never compared
+    # against a stale copy with the same shard names
+    dest = os.path.join(dest, info.get("sha", "latest")[:12])
+    os.makedirs(dest, exist_ok=True)
+    for f in files:
+        out = os.path.join(dest, os.path.basename(f))
+        if not os.path.exists(out):
+            print(f"  downloading {f}")
+            urllib.request.urlretrieve(f"https://huggingface.co/datasets/{repo}/resolve/main/{f}", out)
+    return dest
+
+
 def read_release(path):
     """Rows from a parquet dir/file or a JSONL file."""
     if path.endswith(".jsonl"):
@@ -76,7 +100,8 @@ def main():
     ap.add_argument("--dist", default=DIST)
     ap.add_argument("--master", default=MASTER)
     ap.add_argument("--expect-rows", type=int, default=0)
-    ap.add_argument("--baseline", help="previous release (articles.jsonl or parquet dir)")
+    ap.add_argument("--baseline", help="previous release: articles.jsonl, a parquet dir, "
+                                       "or 'hf' for the version currently on Hugging Face")
     ap.add_argument("--max-state-delta", type=float, default=0.05)
     ap.add_argument("--sample", type=int, default=5,
                     help="print N random Wikipedia rows for a human spot-check")
@@ -138,7 +163,7 @@ def main():
             f"{len(conflicts)} conflicts", conflicts)
 
     if args.baseline:
-        base, _ = read_release(args.baseline)
+        base, _ = read_release(fetch_hf_release() if args.baseline == "hf" else args.baseline)
         old = collections.Counter(r["state"] for r in base)
         new = collections.Counter(r["state"] for r in rows)
         moved = sorted(((new[s] - old[s]) / max(old[s], 1), s, old[s], new[s])
