@@ -2,13 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase, usingSupabase } from "../lib/supabase";
-
-type School = {
-  i: string; n: string; s: string; c: string; ci: string;
-  a?: string; z?: string; d?: string;
-  ph?: string; tf?: number | null; gl?: string; gh?: string; ch?: string; mg?: string;
-  lv: string; e: number | null; w: 0 | 1; x: number; y: number;
-};
+import type { School } from "../lib/types";
 
 type Info = {
   type: string; established: string; grades: string; enrollment: string;
@@ -31,8 +25,7 @@ type FactFlag = { field: string; label: string; current_value: string; corrected
 type Saved = { school: School; facts: Info | null; sources: SourceLink[]; flags: FactFlag[]; contact?: Contact; at: string };
 
 const ROLES = ["Student", "Alumni", "Teacher / staff", "Parent", "Community member", "Other"];
-const LEVEL_WORD: Record<string, string> = { elementary: "elementary", middle: "middle", high: "high", other: "" };
-const LEVEL_GRADES: Record<string, string> = { elementary: "K–5", middle: "6–8", high: "9–12", other: "K–12" };
+const LEVEL_WORD: Record<string, string> = { elementary: "elementary", middle: "middle", high: "high" };
 const emptyContact: Contact = { name: "", email: "", role: "Student", org: "", consent: false };
 
 // The verifiable, scalar facts we show read-only and let people flag.
@@ -64,14 +57,15 @@ const normUrl = (u: string) => { const t = u.trim(); return /^https?:\/\//i.test
 
 const WP_API = "https://en.wikipedia.org/w/api.php";
 
-async function fetchWiki(name: string) {
-  const sr = await fetch(`${WP_API}?action=query&list=search&srsearch=${encodeURIComponent(name)}&srlimit=1&format=json&origin=*`).then((r) => r.json());
-  const title = sr?.query?.search?.[0]?.title;
-  if (!title) throw new Error("not found");
+// Load the article the data pipeline matched to this school — by exact title,
+// never by searching the name (a search for "Lincoln High School" returns
+// whichever Lincoln High ranks first).
+async function fetchWiki(title: string) {
   const [pt, ex] = await Promise.all([
     fetch(`${WP_API}?action=parse&page=${encodeURIComponent(title)}&prop=wikitext&format=json&formatversion=2&origin=*`).then((r) => r.json()),
     fetch(`${WP_API}?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(title)}&format=json&formatversion=2&origin=*`).then((r) => r.json()),
   ]);
+  if (pt?.error) throw new Error(pt.error.info || "not found");
   return { title, wikitext: pt?.parse?.wikitext || "", extract: ex?.query?.pages?.[0]?.extract || "" };
 }
 function clean(s: string) {
@@ -105,8 +99,10 @@ function parseInfobox(wt: string): Record<string, string> {
 function templateInfo(s: School): Info {
   const lvl = LEVEL_WORD[s.lv] || "";
   const where = [s.ci, s.s].filter(Boolean).join(", ");
-  const type = ["Public", s.ch === "Yes" ? "charter" : "", s.mg === "Yes" ? "magnet" : ""].filter(Boolean).join(" ");
-  const grades = s.gl && s.gh ? `${s.gl}–${s.gh}` : (LEVEL_GRADES[s.lv] || "");
+  const sector = s.pv ? "private" : "public";
+  const type = s.pv ? "Private" : ["Public", s.ch === "Yes" ? "charter" : ""].filter(Boolean).join(" ");
+  // Only what NCES records — an unknown grade span stays unknown.
+  const grades = s.gl && s.gh ? `${s.gl}–${s.gh}` : "";
   const ratio = s.e && s.tf ? `${(s.e / s.tf).toFixed(1)}:1` : "";
   return {
     type, established: "", grades,
@@ -115,7 +111,7 @@ function templateInfo(s: School): Info {
     principal: "", staff: s.tf != null ? String(s.tf) : "", ratio,
     motto: "", colors: "", mascot: "", team: "",
     conference: "", newspaper: "", yearbook: "",
-    lead: `${s.n} is a public ${lvl ? lvl + " " : ""}school${where ? ` in ${where}` : ""}.`,
+    lead: `${s.n} is a ${sector} ${lvl ? lvl + " " : ""}school${where ? ` in ${where}` : ""}.`,
     history: "", academics: "", athletics: "", alumni: "", sources: "",
   };
 }
@@ -181,8 +177,8 @@ export default function ContributorPanel({ school, onClose }: { school: School; 
       } catch {}
     }
 
-    if (school.w) {
-      fetchWiki(school.n)
+    if (school.w && school.wt) {
+      fetchWiki(school.wt)
         .then((res) => { if (cancelled) return; setWikiTitle(res.title); setInfo(fromWiki(school, res)); })
         .catch(() => { if (!cancelled) setInfo(templateInfo(school)); })
         .finally(() => { if (!cancelled) setLoading(false); });

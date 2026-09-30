@@ -18,10 +18,10 @@ to render the map.
 Output: web/public/data/schools.json
   [{ i: nces_id, n: name, s: state, c: county_fips, ci: city, a: address,
      z: zip, d: district, lv: level, e: enrollment, ph: phone,
-     tf: teachers_fte, gl: lowest_grade, gh: highest_grade, ch: charter Y/N,
-     mg: magnet Y/N (not in CCD 2024-25; blank), w: 0|1 (has_wikipedia),
-     x: lon, y: lat }, ...]
-  (d/ph/tf/gl/gh/ch/mg are public-school only.)
+     tf: teachers_fte, gl: lowest_grade, gh: highest_grade, ch: charter Y/N
+     (public only), pv: 1 (private only), w: 0|1 (has_wikipedia),
+     wt: matched Wikipedia article title (when w=1), x: lon, y: lat }, ...]
+  gl/gh are blank when NCES has no grade span; nothing is guessed.
 plus state_coverage.json and county_coverage.json aggregates.
 
 Usage:
@@ -55,19 +55,15 @@ def _pad(i):
 
 
 def load_matched_ids(path):
-    """Set of NCES school ids that have a Wikipedia article, from the audited
-    wiki<->NCES matcher output (column `nces_school_id`)."""
-    ids = set()
+    """NCES school id -> matched Wikipedia article title, from the audited
+    wiki<->NCES matcher output (columns `nces_school_id`, `wiki_title`)."""
+    ids = {}
     with open(path, encoding="utf-8") as fh:
         for r in csv.DictReader(fh):
             sid = (r.get("nces_school_id") or "").strip()
             if sid:
-                ids.add(_pad(sid))
+                ids[_pad(sid)] = (r.get("wiki_title") or "").strip()
     return ids
-
-
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data"))
-from common.states import USPS_TO_FIPS as STATE_FIPS  # noqa: E402
 
 
 def _enroll(v):
@@ -122,6 +118,23 @@ def load_coords(path):
                 for r in csv.DictReader(f) if r["lat"] and r["lon"]}
 
 
+_PSS_GRADES = [("PK", "PSS_ENROLL_PK"), ("K", "PSS_ENROLL_K")] + \
+              [(str(g), f"PSS_ENROLL_{g}") for g in range(1, 13)]
+
+
+def _phone(p):
+    """PSS stores bare digits; show them like CCD does: (334)585-5100."""
+    d = "".join(ch for ch in (p or "") if ch.isdigit())
+    return f"({d[:3]}){d[3:6]}-{d[6:]}" if len(d) == 10 else (p or "").strip()
+
+
+def _private_grades(r):
+    """First/last grade with enrolled students — the PSS LoGrade/HiGrade codes
+    are an undocumented numeric scheme (same rule as generate_article.py)."""
+    present = [g for g, col in _PSS_GRADES if (_enroll(r.get(col)) or 0) > 0]
+    return (present[0], present[-1]) if present else ("", "")
+
+
 def rows_from_master(master_path, coords):
     """Compact map rows for every NCES school with coordinates.
     Returns (rows, n_nocoord)."""
@@ -141,22 +154,31 @@ def rows_from_master(master_path, coords):
                 row.update({"d": r.get("District", ""), "lv": _span_level(gl, gh),
                             "ph": r.get("phone", ""), "tf": _enroll(r.get("teachers")),
                             "gl": gl, "gh": gh,
-                            "ch": r.get("Charter", "") if r.get("Charter") in ("Yes", "No") else "",
-                            "mg": ""})        # magnet status isn't in the CCD 2024-25 directory
+                            "ch": r.get("Charter", "") if r.get("Charter") in ("Yes", "No") else ""})
             else:
-                row.update({"d": "", "lv": PSS_LEVEL.get(r.get("PSS_LEVEL", "").strip(), "other")})
+                gl, gh = _private_grades(r)
+                row.update({"pv": 1, "d": "",
+                            "lv": PSS_LEVEL.get(r.get("PSS_LEVEL", "").strip(), "other"),
+                            "ph": _phone(r.get("phone", "")), "tf": _enroll(r.get("teachers")),
+                            "gl": gl, "gh": gh})
             row.update({"w": 0, "x": round(lon, 5), "y": round(lat, 5)})
             rows.append(row)
     return rows, n_nocoord
 
 
-def flag(rows, matched_ids):
-    """Set each row's `w` from the matched-id set; return the matched count."""
-    matched = 0
+def flag(rows, matched):
+    """Set each row's `w` (has Wikipedia) and `wt` (the matched article title)
+    from the matcher output; return the matched count."""
+    n = 0
     for s in rows:
-        s["w"] = 1 if _pad(s["i"]) in matched_ids else 0
-        matched += s["w"]
-    return matched
+        title = matched.get(_pad(s["i"]))
+        s["w"] = 1 if title is not None else 0
+        if title:
+            s["wt"] = title
+        else:
+            s.pop("wt", None)
+        n += s["w"]
+    return n
 
 
 def write_outputs(out_path, rows):
@@ -221,8 +243,8 @@ def main():
     mb = os.path.getsize(args.out) / 1e6
     sys.stderr.write(
         f"\nDone. {len(rows):,} schools -> {args.out} ({mb:.1f} MB)\n"
-        f"  public/private: {sum('ph' in r for r in rows):,} / "
-        f"{sum('ph' not in r for r in rows):,}\n"
+        f"  public/private: {sum(not r.get('pv') for r in rows):,} / "
+        f"{sum(bool(r.get('pv')) for r in rows):,}\n"
         f"  has_wikipedia : {n_match:,} ({100*n_match/max(len(rows),1):.1f}%)\n"
         f"  states={len(state_agg)}  counties={len(county_agg)}\n"
         f"  dropped (no coordinates): {n_nocoord}\n"

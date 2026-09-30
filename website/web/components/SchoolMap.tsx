@@ -9,6 +9,7 @@ import * as topojson from "topojson-client";
 import ContributorPanel from "./ContributorPanel";
 import MyContributions from "./MyContributions";
 import { supabase } from "../lib/supabase";
+import type { School } from "../lib/types";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 const MAP_STYLE =
@@ -57,14 +58,11 @@ const NAME2ABBR: Record<string, string> = {
   "South Dakota": "SD", Tennessee: "TN", Texas: "TX", Utah: "UT", Vermont: "VT",
   Virginia: "VA", Washington: "WA", "West Virginia": "WV", Wisconsin: "WI",
   Wyoming: "WY", "District of Columbia": "DC",
+  // territories, as named in us-atlas
+  "Puerto Rico": "PR", Guam: "GU", "American Samoa": "AS",
+  "United States Virgin Islands": "VI", "Commonwealth of the Northern Mariana Islands": "MP",
 };
 
-type School = {
-  i: string; n: string; s: string; c: string; ci: string;
-  a?: string; z?: string; d?: string;
-  ph?: string; tf?: number | null; gl?: string; gh?: string; ch?: string; mg?: string;
-  lv: string; e: number | null; w: 0 | 1; x: number; y: number;
-};
 type Agg = Record<string, [number, number]>; // key -> [total, has]
 type FC = { type: "FeatureCollection"; features: any[] };
 
@@ -90,11 +88,13 @@ export default function SchoolMap() {
   // dot size grows as you zoom into a city/street (px)
   const ptRadius = Math.min(16, Math.max(3, (zoom - 6.5) * 3));
 
-  // total contributions so far (Supabase count, or this browser's drafts as a fallback)
+  // total contributions so far (Supabase count, or this browser's drafts as a fallback).
+  // The count comes from a security-definer function: anonymous visitors can't
+  // read the contributions table itself (it holds contributors' contact info).
   function loadContribCount() {
     if (supabase) {
-      supabase.from("contributions").select("*", { count: "exact", head: true }).then(({ count, error }) => {
-        if (!error && count != null) setContribCount(count);
+      supabase.rpc("contribution_count").then(({ data, error }) => {
+        if (!error && typeof data === "number") setContribCount(data);
         else setContribCount(localContribCount());
       });
     } else {
@@ -330,7 +330,7 @@ export default function SchoolMap() {
 
         <button
           className="account-btn"
-          onClick={() => { setSelected(null); setShowAccount(true); }}
+          onClick={() => { setSelected(null); setShowAccount(true); loadPoints(); }}
         >
           My contributions
         </button>
@@ -390,7 +390,11 @@ export default function SchoolMap() {
       {showAccount && (
         <MyContributions
           onClose={() => setShowAccount(false)}
-          onOpenSchool={(s) => { setShowAccount(false); pick(s); }}
+          onOpenSchool={(s) => {
+            // a saved contribution carries only a snapshot; open the full record
+            setShowAccount(false);
+            pick(points?.find((p) => p.i === s.i) ?? s);
+          }}
         />
       )}
     </div>

@@ -1,5 +1,17 @@
 -- SchoolData — contributions table
 -- Run this in the Supabase dashboard → SQL Editor → New query → Run.
+-- Safe to re-run: every statement is idempotent.
+--
+-- Access model
+--   anonymous visitors  may INSERT a contribution, and read only the total
+--                       count (contribution_count()) — never the rows, which
+--                       hold contributors' names and emails
+--   signed-in users     (Supabase Auth email link) may SELECT their own rows:
+--                       contact_email = the email they verified
+--
+-- Also required in the dashboard: Authentication → Providers → Email enabled,
+-- and Authentication → URL Configuration → the site URL (and localhost for
+-- development) in "Redirect URLs", so the sign-in link returns to the map.
 
 create table if not exists public.contributions (
   id            uuid primary key default gen_random_uuid(),
@@ -30,12 +42,27 @@ create index if not exists contributions_nces_idx  on public.contributions (nces
 -- Row Level Security.
 alter table public.contributions enable row level security;
 
--- DEMO policies: anyone (anon key) may submit a contribution and look one up by
--- email. This is fine for a prototype but means contributions are world-readable.
--- For production, switch to Supabase Auth (magic link) and replace the SELECT
--- policy with:  using (auth.jwt() ->> 'email' = contact_email)
-create policy "anon can insert" on public.contributions
-  for insert to anon with check (true);
+-- Remove the prototype's world-readable policy (it exposed every contributor's
+-- name and email to anyone holding the public anon key).
+drop policy if exists "anon can select" on public.contributions;
 
-create policy "anon can select" on public.contributions
-  for select to anon using (true);
+drop policy if exists "anon can insert" on public.contributions;
+create policy "anon can insert" on public.contributions
+  for insert to anon, authenticated with check (true);
+
+drop policy if exists "owner can select" on public.contributions;
+create policy "owner can select" on public.contributions
+  for select to authenticated
+  using (contact_email = lower(auth.jwt() ->> 'email'));
+
+-- The public counter on the map: a total, nothing else.
+create or replace function public.contribution_count()
+returns bigint
+language sql
+stable
+security definer
+set search_path = public
+as $$ select count(*) from public.contributions $$;
+
+revoke all on function public.contribution_count() from public;
+grant execute on function public.contribution_count() to anon, authenticated;

@@ -65,6 +65,22 @@ npm install
 npm run dev          # http://localhost:3000
 ```
 
+## Contributions backend (Supabase)
+
+Without configuration the contributor panel stores submissions in the browser
+(demo mode). To collect them for real:
+
+1. Create a Supabase project; copy `web/.env.local.example` to `web/.env.local`
+   and fill in the project URL and anon key (also set both in Vercel).
+2. Run `web/supabase/schema.sql` in the SQL editor (idempotent — re-run it after
+   pulling changes). Anonymous visitors can **insert** contributions and read
+   only the total count; contributors' names and emails are never readable
+   without signing in.
+3. Authentication → Providers: enable **Email**. Authentication → URL
+   Configuration: add the site URL and `http://localhost:3000` to Redirect URLs.
+   "My contributions" emails a sign-in link, and a signed-in user sees only the
+   rows submitted with their verified email.
+
 ## Deploy to Vercel
 
 1. The repo is on GitHub at [`bxshan/SchoolData`](https://github.com/bxshan/SchoolData).
