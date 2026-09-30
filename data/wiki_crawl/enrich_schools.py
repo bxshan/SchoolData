@@ -216,8 +216,8 @@ def resolve_and_enrich(session, rows, delay):
                 "source_category": sc,
                 "validation": val.get(orig, ""),
                 "redirect_to": "",
-                "defunct_category": "1" if DEFUNCT_CATEGORY.search(
-                    " | ".join([sc] + [c["title"] for c in page.get("categories", [])])) else "",
+                "defunct_category": defunct_category(
+                    [sc] + [c["title"] for c in page.get("categories", [])]),
                 "country": "", "dissolved": "", "operating": "",
                 "validation_note": "",
             }
@@ -361,16 +361,30 @@ HIGHER_ED = re.compile(
 NETWORK = re.compile(
     r"^(?:\S+\s+){0,3}?(network|district|school system|organization|"
     r"organisation|board of education|group of schools)\b", re.I)
-HISTORIC_P31 = re.compile(
-    r"school building|one-room school|rosenwald school|schoolhouse|former school",
-    re.I)
+# Building-only Wikidata types. A school also typed "high school", "public
+# school", ... is an operating school whose building happens to be listed.
+BUILDING_P31 = re.compile(
+    r"school building|one-room school|rosenwald school|schoolhouse|former school|"
+    r"building|historic|national register|place", re.I)
+
+
+def building_only(instance_of):
+    labels = [l for l in (instance_of or "").split("|") if l.strip()]
+    return bool(labels) and all(BUILDING_P31.search(l) for l in labels)
 FORMER_DESC = re.compile(r"\b(former|defunct|closed)\b", re.I)
 # A page in any closed-school category ("Defunct high schools in Ohio",
 # "Educational institutions disestablished in 1971", ...). Wikidata often lacks
 # a dissolution date for these, so the crawl tags many of them `school`.
+# "Former" is deliberately absent: "Former girls' schools" and "Former
+# university-affiliated schools" hold schools that are still open.
 DEFUNCT_CATEGORY = re.compile(
-    r"\b(defunct|former|closed|demolished)\b[^|]*\b(schools?|academ|institutions?)|"
+    r"\b(defunct|closed|demolished)\b[^|]*\b(schools?|academ|institutions?)|"
     r"disestablished in \d{4}|disestablishments in", re.I)
+
+
+def defunct_category(categories):
+    """First closed-school category among `categories` (kept for auditing), or ''."""
+    return next((c for c in categories if DEFUNCT_CATEGORY.search(c)), "")
 
 
 class NcesLocator:
@@ -425,7 +439,7 @@ def revalidate(records, locator=None):
 
         # 2. operating: no when dissolved, a historic building type, or described as former
         if rec["validation"] not in ("redirect",):
-            closed = (rec.get("dissolved") or HISTORIC_P31.search(inst)
+            closed = (rec.get("dissolved") or building_only(inst)
                       or FORMER_DESC.search(desc) or rec.get("defunct_category")
                       or rec["validation"] == "defunct")
             rec["operating"] = "no" if closed else "yes"
@@ -446,7 +460,7 @@ def revalidate(records, locator=None):
             notes.append("network/district: " + NETWORK.search(desc).group(0))
         elif v == "school" and rec.get("defunct_category"):
             rec["validation"] = "defunct"
-            notes.append("in a defunct/closed-school category")
+            notes.append(f"in a closed-school category: {rec['defunct_category']}")
         elif v == "unverified" and rec["wikidata_qid"] and SCHOOLISH_DESC.search(desc) \
                 and not NETWORK.search(desc) and not HIGHER_ED.search(desc):
             rec["validation"] = "school"

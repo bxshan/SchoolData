@@ -113,6 +113,9 @@ def test_revalidate_operating_flag():
     assert _reval(dissolved="1")["operating"] == "no"
     assert _reval(description="Former school in Ohio")["operating"] == "no"
     assert _reval(instance_of="school building")["operating"] == "no"
+    assert _reval(instance_of="school building|United States historic place")["operating"] == "no"
+    # an operating school whose building is also listed (Chandler High School)
+    assert _reval(instance_of="high school|school building|public school")["operating"] == "yes"
     assert _reval(description="Historic public high school in Boston")["operating"] == "yes"
 
 
@@ -125,12 +128,21 @@ def test_defunct_category_detection():
     hit = lambda cats: bool(e.DEFUNCT_CATEGORY.search(" | ".join(cats)))   # noqa: E731
     assert hit(["Category:Defunct high schools in Ohio"])
     assert hit(["Category:Educational institutions disestablished in 1971"])
-    assert hit(["Category:Former Catholic schools in New York"])
+    # "Former ..." categories hold open schools: former girls' schools, etc.
+    assert not hit(["Category:Former university-affiliated schools in the United States"])
+    assert not hit(["Category:Former girls' schools in California"])
     assert not hit(["Category:High schools in Ohio", "Category:Schools in Ohio"])
     # words from two different categories must not combine
     assert not hit(["Category:Former municipalities in Ohio", "Category:High schools in Ohio"])
 
 
 def test_school_in_defunct_category_becomes_defunct():
-    r = _reval(defunct_category="1")
+    r = _reval(defunct_category="Category:Defunct high schools in Ohio")
     assert r["validation"] == "defunct" and r["operating"] == "no"
+
+
+def test_defunct_category_returns_the_category_for_auditing():
+    assert e.defunct_category(["Category:Schools in Ohio",
+                               "Category:Educational institutions disestablished in 1999"]) \
+        == "Category:Educational institutions disestablished in 1999"
+    assert e.defunct_category(["Category:Schools in Ohio"]) == ""
