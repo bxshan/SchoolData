@@ -102,8 +102,7 @@ def load_generated(path):
              else sorted(glob.glob(os.path.join(path, "*.jsonl"))))
     if not files:
         sys.exit(f"no generated-article JSONL found at {path}\n"
-                 f"  run: cd ../nces_crawl/generate_articles && "
-                 f"python run_samples.py --n -1 --out articles.jsonl")
+                 f"  or omit --articles to render from the master")
     out, dups = {}, 0
     for fp in files:
         with open(fp, encoding="utf-8") as fh:

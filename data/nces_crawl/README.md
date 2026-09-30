@@ -23,7 +23,6 @@ Last built 2026-09-29.
   school from the master (see below)
 - `{public,private}_school_downloads/` — downloaded Excel files (created at run time)
 - `output_{public,private,all}_schools/` — master CSVs
-- `output_generated_articles/` — generated article JSONL (git-ignored contents)
 
 ## Usage
 
@@ -73,14 +72,14 @@ cd generate_articles
 python generate_article.py --id 010135002667        # one school by NCES id
 python generate_article.py --name "A C Moore Primary School"
 python generate_article.py --demo --year 2022-23      # override the data vintage
-python run_samples.py --n 10                         # 10 random schools -> stdout
-python run_samples.py --n -1 --out all_articles.jsonl   # all schools -> output_generated_articles/
+python generate_article.py --sample 10 --sector private --seed 3   # random schools
+python generate_article.py --sample -1 --jsonl all.jsonl           # every school -> JSONL
 ```
 
-`run_samples.py` writes JSONL (`{school_id, school_name, sector, state, article}`)
-to the fixed `output_generated_articles/` dir (a sibling of `output_all_schools/`) — ready to
-seed the open dataset or draft Wikipedia stubs. Pass a bare `--out` name to land it
-there; a path with a separator writes elsewhere.
+The sentence-by-sentence rules (which field drives each clause) are in the
+module docstring of `generate_article.py`. The release build
+(`data_publish/prep_data_publish.py`) calls `render_article()` for every school
+directly, so no pre-generated file is needed.
 
 The "As of the <year> school year" clause uses `DATA_YEAR` in
 `generate_article.py` (per sector; currently public 2024-25, private 2023-24).

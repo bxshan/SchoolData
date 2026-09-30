@@ -11,14 +11,44 @@ and for private (PSS) schools the religious affiliation, coeducational status,
 racial composition, library, session length, and association memberships.
 
 Pure function of the record — identical input yields identical output (no model,
-no randomness). Every clause is optional: the article stays coherent for any
-subset of fields. Codes that cannot be decoded confidently (PSS_ORIENT
-denomination, PSS_COMM_TYPE) are omitted rather than guessed.
+no randomness). Every clause is optional: a sentence appears only when its fields
+exist, so a missing value yields a shorter article, never a guess. Codes that
+cannot be decoded confidently (PSS_ORIENT denomination, PSS_COMM_TYPE) are
+omitted. prep_data_publish.py calls render_article() for every school.
+
+Public (CCD) article, in order — each [..] only when its data exists:
+  {Name} is a public [charter ][alternative|special-education|vocational ]
+    [elementary|middle|high ]school[ in {City}, {County}, {State}]
+    [, serving grades {lo}–{hi}].            level from the grade span; K-8 etc. get none
+  [It is part of the {District} school district.]   omitted if it repeats the name
+  [It is located in {locale}.]                "Town, Distant" -> "a distant town"
+  [It opened in the {Year} school year.]      only when Status is "New"
+  [As of the {Year} school year, it enrolled {N} students
+    [and employed about {T} teachers, a student–teacher ratio of roughly {R}:1].]
+  [About {P}% of students were eligible for free or reduced-price lunch.]
+  [Its street address is {Address}, {City}, {ST} {ZIP}[, and its phone number is {Phone}].]
+
+Private (PSS) article:
+  {Name} is a [coeducational|all-boys|all-girls ][Catholic|religiously affiliated|
+    nonsectarian ]private [Montessori|special-education|... ][elementary|secondary ]
+    school[ in ...][, serving grades {lo}–{hi}].   grades = first/last grade with
+                                                      non-zero PSS_ENROLL_<grade>
+  [It is located in {locale}.]  [size sentence as above]
+  [Its student body was {p}% {race}, ...]           non-zero shares, largest first
+  [The school has/does not have a library and is in session about {D} days a
+    year, {H} hours a day.]
+  [It reports affiliation with {association}, ..., and {association}.]
+  [Its street address is ...]
+
+{Year} is DATA_YEAR[sector] (or --year). Names in ALL CAPS are title-cased with
+known acronyms kept; states are written out ("the District of Columbia").
 
 Usage:
-    python generate_article.py --id 010135002667
+    python generate_article.py --id 010135002667       # one school by NCES id
     python generate_article.py --name "A C Moore Primary School"
-    python generate_article.py --demo
+    python generate_article.py --demo                  # a public and a private example
+    python generate_article.py --sample 10 --sector private --seed 3
+    python generate_article.py --sample -1 --jsonl out.jsonl   # every school -> JSONL
 """
 
 import argparse
@@ -317,23 +347,46 @@ def main():
                          "(default: per sector, see DATA_YEAR)")
     ap.add_argument("--demo", action="store_true",
                     help="render a public and a private example")
+    ap.add_argument("--sample", type=int,
+                    help="render N random schools (-1 = all), reproducible via --seed")
+    ap.add_argument("--sector", choices=["public", "private", "all"], default="all")
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--jsonl", help="write {school_id, school_name, sector, state, "
+                                    "article} lines to this file instead of printing")
     args = ap.parse_args()
     rows = _load(args.master)
+    if args.sector != "all":
+        rows = [r for r in rows if r.get("sector") == args.sector]
 
     if args.id:
         picks = [r for r in rows if r["school_id"] == args.id][:1]
     elif args.name:
         picks = [r for r in rows if (r["school_name"] or "").lower() == args.name.lower()][:1]
+    elif args.sample is not None:
+        import random
+        picks = rows if args.sample < 0 else \
+            random.Random(args.seed).sample(rows, min(args.sample, len(rows)))
     elif args.demo:
         pub = next(r for r in rows if r["sector"] == "public" and r.get("Locale")
                    and _num(r.get("total_students")) and r.get("District"))
         pri = next(r for r in rows if r["sector"] == "private" and r.get("PSS_RELIG"))
         picks = [pub, pri]
     else:
-        ap.error("give --id, --name, or --demo")
+        ap.error("give --id, --name, --demo or --sample")
 
     if not picks:
         print("no matching school found.")
+        return
+    if args.jsonl:
+        import json
+        with open(args.jsonl, "w", encoding="utf-8") as fh:
+            for r in picks:
+                fh.write(json.dumps({"school_id": r["school_id"],
+                                     "school_name": r["school_name"],
+                                     "sector": r["sector"], "state": r["state"],
+                                     "article": render_article(r, args.year)},
+                                    ensure_ascii=False) + "\n")
+        sys.stderr.write(f"wrote {len(picks):,} articles -> {args.jsonl}\n")
         return
     for i, r in enumerate(picks):
         if i:

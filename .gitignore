@@ -33,7 +33,6 @@ events.out.tfevents.*
 data/nces_crawl/public_school_downloads/
 data/nces_crawl/private_school_downloads/
 data/nces_crawl/bulk_downloads/
-data/nces_crawl/output_generated_articles/
 data/wiki_crawl/output/
 data/data_publish/output/
 
