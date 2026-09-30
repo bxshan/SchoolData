@@ -71,3 +71,8 @@ def test_stale_match_csv_is_refused():
     with pytest.raises(SystemExit):
         p.check_matches_against_master({"999": {}}, {"1": gen()})
     p.check_matches_against_master({"1": {}}, {"1": gen(), "2": gen()})   # fine
+
+
+def test_closed_school_check_survives_abbreviations():
+    assert p.describes_closed_school("St. Joseph's Academy was a Catholic girls' school in Maryland.")
+    assert not p.describes_closed_school("St. Joseph's Academy is a Catholic girls' school in Maryland.")

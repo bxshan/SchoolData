@@ -166,9 +166,12 @@ _OPENING_WAS = re.compile(r"^[^.]{0,200}?\b(was|were)\s+(a|an|the)\b", re.I)
 _OPENING_IS = re.compile(r"^[^.]{0,200}?\b(is|are)\s+(a|an|the)\b", re.I)
 
 
+_ABBREV_DOT = re.compile(r"\b(St|Ste|Mt|Dr|Jr|Sr|No|Ft|Rev|Msgr|Sen|Gen|Pres)\.", re.I)
+
+
 def describes_closed_school(text):
     """True when the article's first sentence says the school *was* something."""
-    first = (text or "")[:300]
+    first = _ABBREV_DOT.sub(r"\1", (text or "")[:300])
     return bool(_OPENING_WAS.search(first)) and not _OPENING_IS.search(first)
 
 

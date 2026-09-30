@@ -126,7 +126,8 @@ def resolve_and_enrich(session, rows, delay):
             "titles": "|".join(batch),
             "redirects": "1",
             "prop": "info|coordinates|pageprops|categories|description|pageviews|pageimages|extracts",
-            "exintro": "1", "explaintext": "1", "exsentences": "1", "exlimit": "max",
+            # exchars, not exsentences: the sentence splitter stops at "St." / "Dr."
+            "exintro": "1", "explaintext": "1", "exchars": "300", "exlimit": "max",
             "ppprop": "wikibase_item",
             "coprop": "lat|lon",
             "colimit": "max",
@@ -379,11 +380,17 @@ SINGLE_SCHOOL_TITLE = re.compile(r"\b(school|academy|institute)\b(?!s)", re.I)
 _LEAD_IS = re.compile(r"^[^.]{0,200}?\b(is|are)\s+(an?|the)\b", re.I)
 _LEAD_WAS = re.compile(r"^[^.]{0,200}?\b(was|were)\s+(an?|the)\b", re.I)
 _LEAD_FORMER = re.compile(r"\b(is|are)\s+(an?|the)\s+(former|historic|defunct|closed)\b", re.I)
+_ABBREV_DOT = re.compile(r"\b(St|Ste|Mt|Dr|Jr|Sr|No|Ft|Rev|Msgr|Sen|Gen|Pres)\.", re.I)
+# The article's first sentence calls it a network/system/district of schools.
+NETWORK_LEAD = re.compile(
+    r"\b(is|are)\s+(an?|the)\s+[^.]{0,60}?\b(school network|schools network|"
+    r"network of|charter network|charter management|school system|system of|"
+    r"school district|group of)\b", re.I)
 
 
 def lead_tense(lead):
     """'present' for "X is a ... school", 'past' for "X was a ...", else ''."""
-    lead = lead or ""
+    lead = _ABBREV_DOT.sub(r"\1", lead or "")
     if _LEAD_IS.search(lead) and not _LEAD_FORMER.search(lead):
         return "present"
     if _LEAD_WAS.search(lead) or _LEAD_FORMER.search(lead):
@@ -493,6 +500,9 @@ def revalidate(records, locator=None):
                 and not SCHOOLISH_DESC.search(desc.replace("college prep", "")):
             rec["validation"] = "out_of_scope"
             notes.append("higher education")
+        elif v == "school" and NETWORK_LEAD.search(_ABBREV_DOT.sub(r"\1", rec.get("lead") or "")):
+            rec["validation"] = "out_of_scope"
+            notes.append("network/district: the article's first sentence says so")
         elif v == "school" and NETWORK.search(desc) \
                 and not (k12 and SINGLE_SCHOOL_TITLE.search(rec["title"])):
             # A single-school district ("Lenape Valley Regional High School" is
@@ -525,6 +535,22 @@ def _out(name):
     return name if os.path.dirname(name) else os.path.join(OUT_DIR, name)
 
 
+def fetch_leads(session, pageids, delay):
+    """pageid -> first 300 characters of the article (plain text), 20 per request."""
+    out = {}
+    for i in range(0, len(pageids), 20):
+        chunk = pageids[i:i + 20]
+        data = api_get(session, {"action": "query", "pageids": "|".join(chunk),
+                                 "prop": "extracts", "exintro": "1", "explaintext": "1",
+                                 "exchars": "300", "exlimit": "max"})
+        for p in data.get("query", {}).get("pages", []):
+            out[str(p.get("pageid"))] = re.sub(r"\s+", " ", p.get("extract") or "").strip()[:400]
+        if (i // 20) % 50 == 0:
+            sys.stderr.write(f"  leads {min(i + 20, len(pageids))}/{len(pageids)}\n")
+        time.sleep(delay)
+    return out
+
+
 def write_enriched(path, records):
     with open(path, "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=ENRICHED_FIELDS, extrasaction="ignore")
@@ -545,6 +571,9 @@ def main():
     ap.add_argument("--nces-coords", default=os.path.join(nces_out, "school_coordinates.csv"),
                     help="NCES school coordinates used to infer a missing state; '' disables")
     ap.add_argument("--nces-master", default=os.path.join(nces_out, "all_schools_master.csv"))
+    ap.add_argument("--refresh-leads", action="store_true",
+                    help="re-fetch every article's first 300 characters into the "
+                         "existing --out file, then revalidate (~15 min)")
     ap.add_argument("--revalidate-only", action="store_true",
                     help="re-run revalidate() on the existing --out file (after a "
                          "rule change) without any network access, then exit")
@@ -558,9 +587,19 @@ def main():
     locator = (NcesLocator(args.nces_coords, args.nces_master)
                if args.nces_coords and os.path.exists(args.nces_coords) else None)
 
-    if args.revalidate_only:
+    if args.revalidate_only or args.refresh_leads:
         with open(args.out, newline="", encoding="utf-8") as fh:
             records = {i: r for i, r in enumerate(csv.DictReader(fh))}
+        if args.refresh_leads:
+            session = requests.Session()
+            session.headers.update({"User-Agent": USER_AGENT})
+            if args.proxy:
+                session.proxies.update({"http": args.proxy, "https": args.proxy})
+            leads = fetch_leads(session, [r["pageid"] for r in records.values()
+                                          if r["validation"] != "redirect"], args.delay)
+            for r in records.values():
+                if r["pageid"] in leads:
+                    r["lead"] = leads[r["pageid"]]
         changes = revalidate(records, locator)
         sys.stderr.write(f"revalidated {len(records):,} rows offline: {dict(changes)}\n")
         write_enriched(args.out, records)

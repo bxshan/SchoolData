@@ -197,3 +197,19 @@ def test_revalidate_is_idempotent_from_crawl_tag():
     e.revalidate(recs); first = dict(recs[1])
     e.revalidate(recs)
     assert recs[1]["validation"] == first["validation"] == "out_of_scope"
+
+
+def test_lead_tense_survives_abbreviations():
+    assert e.lead_tense("St. Mary's School is a Catholic school in Ohio.") == "present"
+    assert e.lead_tense("Dr. Martin Luther King Jr. High School was a public school.") == "past"
+
+
+def test_network_named_in_first_sentence():
+    r = _reval(title="Atlas Schools", instance_of="school",
+               description="Charter school network school in Colorado Springs",
+               lead="Atlas Schools is a public charter school network in Colorado Springs, Colorado.")
+    assert r["validation"] == "out_of_scope"
+    r = _reval(title="Detroit Cristo Rey High School", instance_of="high school",
+               description="Private, cristo rey network school in Wayne County",
+               lead="Detroit Cristo Rey High School is a private, coeducational, Roman Catholic high school in Detroit, Michigan, in the Cristo Rey Network.")
+    assert r["validation"] == "school"
