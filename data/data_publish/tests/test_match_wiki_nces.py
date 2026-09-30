@@ -221,3 +221,45 @@ def test_geo_ignores_county_borough_and_generic_words(nces):
     w2 = {**wiki("Léman Manhattan Preparatory School", state="New York"), "lat": "40.71", "lon": "-74.01"}
     assert m.match_one(w1, by_id, by_state, idx, 88.0, defaultdict(int), geo) is None
     assert m.match_one(w2, by_id, by_state, idx, 88.0, defaultdict(int), geo) is None
+
+
+def test_type_words_must_overlap_in_fuzzy_tier(nces):
+    db = nces(pub("1", "Blue Valley Virtual Program", "overland park", "09", "12", state="KS"))
+    assert match(wiki("Blue Valley Academy", state="Kansas"), db) is None
+    db = nces(pub("1", "Chandler Park Academy High School", "harper woods", "09", "12", state="MI"))
+    rec, method, _ = match(wiki("Chandler Park Academy", state="Michigan"), db)
+    assert method == "fuzzy"
+
+
+def test_program_housed_in_the_articles_school_is_not_it(nces):
+    db = nces(pub("1", "Career Academy at Truman High School", "federal way", "09", "12", state="WA"))
+    assert match(wiki("Harry S. Truman High School (Federal Way, Washington)", state="Washington"), db) is None
+
+
+def test_generic_religious_words_do_not_link_schools():
+    assert "mesivta" not in m.core_name(m.norm_name("Rambam Mesivta"))
+
+
+def test_type_word_spellings_are_one_family():
+    n = m.norm_name
+    assert m.types_compatible(n("Marianapolis Preparatory School"), n("MARIANAPOLIS PREP SCHOOL"))
+    assert m.types_compatible(n("Austin Community Academy High School"), n("Austin College and Career Acad HS"))
+    assert m.types_compatible(n("Edison Technical School"), n("Edison Career and Technology High School"))
+    assert not m.types_compatible(n("Blue Valley Academy"), n("Blue Valley Virtual Program"))
+
+
+def test_school_named_x_at_y_is_not_a_program_inside_y():
+    n = m.norm_name
+    assert not m.program_inside_other_school(n("High School at Moorpark College"),
+                                             n("The High School at Moorpark College"))
+    assert m.program_inside_other_school(n("Harry S. Truman High School"),
+                                         n("Career Academy at Truman High School"))
+
+
+def test_town_named_schools_need_matching_type_words(nces):
+    db = nces(pub("1", "St. Paul City High School", "saint paul", "09", "12", state="MN"))
+    assert match(wiki("Saint Paul Preparatory School", state="Minnesota"), db) is None
+    db = nces(pub("1", "Yreka High", "yreka", "09", "12", state="CA"))
+    assert match(wiki("Yreka High School", state="California"), db) is not None
+    db = nces(pub("1", "Arlington Community Charter School", "arlington", "KG", "12", state="OR"))
+    assert match(wiki("Arlington High School (Oregon)", state="Oregon"), db) is not None

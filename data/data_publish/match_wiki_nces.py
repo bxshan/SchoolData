@@ -22,7 +22,10 @@ the article's title (Wikidata NCES ids can point at the school an id now
 belongs to). Tiers 2-4 also drop a candidate that contradicts the article —
 a different city named in the title ("(City, State)" or "(City)"), or an NCES
 grade span that can't serve the article's level (a high-school article is never
-put on a K-5 school). Equally good candidates (same-named schools, fuzzy ties)
+put on a K-5 school). Tiers 3-4 also drop candidates whose school-type words don't overlap ("Blue
+Valley Virtual Program" vs "Blue Valley Academy") and programs housed in the
+school the article is about ("Career Academy at Truman High School").
+Equally good candidates (same-named schools, fuzzy ties)
 are resolved by the title's city, then by the article's coordinates (<= 50 km);
 otherwise the article stays unmatched rather than guessing.
 
@@ -91,7 +94,65 @@ GENERIC = {
     "es", "ms", "hs", "elem", "sch", "district", "campus", "program", "education",
     "charter", "community", "public", "virtual", "online", "magnet", "regional",
     "county", "city", "unified", "union", "free", "center", "centre",
+    # generic religious-school words: two different mesivtas share "mesivta"
+    "mesivta", "mesifta", "yeshiva", "yeshivat", "bais", "beis", "beth",
 }
+
+
+# School-type words (grade levels excluded — the grade span checks those). Two
+# names whose type words don't overlap are different schools even when the rest
+# agrees: "Blue Valley Virtual Program" vs "Blue Valley Academy".
+# Spellings are folded into families so that "Prep" = "Preparatory",
+# "Acad" = "Academy" and a career/technical center renamed "Career and
+# Technology High School" still agrees with itself.
+TYPE_FAMILY = {
+    "virtual": "online", "online": "online", "cyber": "online",
+    "charter": "charter", "chtr": "charter",
+    "academy": "academy", "academies": "academy", "acad": "academy",
+    "program": "program", "programs": "program",
+    "center": "center", "centre": "center", "ctr": "center",
+    "montessori": "montessori", "magnet": "magnet",
+    "career": "career", "technical": "career", "technology": "career", "tech": "career",
+    "vocational": "career", "polytech": "career", "polytechnic": "career",
+    "alternative": "alternative", "alt": "alternative",
+    "preparatory": "prep", "prep": "prep", "institute": "institute",
+    "conservatory": "conservatory",
+}
+TYPE_WORDS = set(TYPE_FAMILY)
+
+
+def type_words(norm):
+    return {TYPE_FAMILY[t] for t in norm.split() if t in TYPE_FAMILY}
+
+
+def types_compatible(norm_a, norm_b):
+    ta, tb = type_words(norm_a), type_words(norm_b)
+    return not ta or not tb or bool(ta & tb)
+
+
+def town_name_only_mismatch(wnorm, wcore, rec):
+    """Schools named after their town are common ("Yreka High School" = "Yreka
+    High"), but when the article's distinctive words are only the town, the
+    type words must agree exactly: "Saint Paul Preparatory School" is not "St.
+    Paul City High School", "Tunica Academy" is not "Tunica Elementary".
+    'charter' and 'magnet' are ignored — schools often drop them from their names
+    (Louisburg High School = "Louisburg Magnet High")."""
+    place = set(norm_name(rec["city"]).split())
+    if {t for t in wcore.split() if t not in place}:
+        return False
+    optional = {"charter", "magnet"}
+    return (type_words(wnorm) - optional) != (type_words(rec["norm"]) - optional)
+
+
+def program_inside_other_school(wnorm, nces_norm):
+    """True when the NCES record is a program housed in another school ("Career
+    Academy at Truman High School") and the article names only that host."""
+    if " at " not in f" {nces_norm} " or " at " in f" {wnorm} ":
+        return False             # "The High School at Moorpark College" is itself
+    before, after = nces_norm.split(" at ", 1)
+    wt = significant_tokens(core_name(wnorm))
+    return bool(wt & significant_tokens(core_name(after))) \
+        and not (wt & significant_tokens(core_name(before)))
 
 
 def core_name(norm):
@@ -440,6 +501,10 @@ def _fuzzy(w, wnorm, wcore, wcity, wexplicit, code, cands, token_idx, threshold,
             continue
         if not levels_compatible(wlevels, r):
             continue
+        if not types_compatible(wnorm, r["norm"]) or program_inside_other_school(wnorm, r["norm"]):
+            continue
+        if town_name_only_mismatch(wnorm, wcore, r):
+            continue
         # token_sort_ratio on cores: distinctive name, order-insensitive,
         # NOT inflated by shared generic suffix.
         s = fuzz.token_sort_ratio(wcore, r["core"])
@@ -510,7 +575,10 @@ def _geo(w, wnorm, wcore, wexplicit, geo):
             continue
         if fuzz.token_set_ratio(wcore, r["core"]) < GEO_MIN_SIMILARITY:
             continue
-        if city_compatible(wexplicit, r["city"]) and levels_compatible(wlevels, r):
+        if (city_compatible(wexplicit, r["city"]) and levels_compatible(wlevels, r)
+                and types_compatible(wnorm, r["norm"])
+                and not program_inside_other_school(wnorm, r["norm"])
+                and not town_name_only_mismatch(wnorm, wcore, r)):
             return r, "geo", round(100.0 * (1 - km / GEO_MAX_KM), 1)
     return None
 

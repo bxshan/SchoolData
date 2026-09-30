@@ -300,3 +300,12 @@ def test_concept_article_is_caught_before_rescue():
                instance_of="school", description="Type of school in the Western United States",
                lead="A ranch school is a type of school used in rural areas of the Western United States.")
     assert r["validation"] == "non_school"
+
+
+def test_plural_overview_article_is_not_a_school():
+    r = _reval(title="Gary Charter Schools", instance_of="school",
+               lead="Gary Charter Schools serve students who reside in Gary, Indiana, United States.")
+    assert r["validation"] == "out_of_scope"
+    r = _reval(title="Mescalero Apache Schools", instance_of="school",
+               lead="Mescalero Apache Schools (MAS), also known as Mescalero Apache School, is a K-12 school.")
+    assert r["validation"] == "school"

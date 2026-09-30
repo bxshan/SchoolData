@@ -432,6 +432,11 @@ def lead_head_noun(lead):
     return heads[-1].lower() if heads else ""
 
 
+PLURAL_TITLE = re.compile(r"\b(schools|academies)$", re.I)
+SCHOOL_HEADS = {"school", "schools", "academy", "institute", "institution", "college",
+                "yeshiva", "center", "centre", "complex", "campus", "program", "programme"}
+
+
 def lead_names_network(lead):
     """True when the first sentence's subject is a network/district/system."""
     head = lead_head_noun(lead)
@@ -561,6 +566,12 @@ def revalidate(records, locator=None):
                 and not SCHOOLISH_DESC.search(desc.replace("college prep", "")):
             rec["validation"] = "out_of_scope"
             notes.append("higher education")
+        elif v == "school" and PLURAL_TITLE.search(re.sub(r"\s*\(.*\)$", "", rec["title"])) \
+                and lead_head_noun(rec.get("lead")) not in SCHOOL_HEADS:
+            # "Gary Charter Schools serve students who reside in Gary ..." — an
+            # overview of several schools, not one school
+            rec["validation"] = "out_of_scope"
+            notes.append("plural title and the first sentence doesn't call it a school")
         elif v == "school" and lead_names_network(rec.get("lead")) \
                 and not (k12 and SINGLE_SCHOOL_TITLE.search(rec["title"])):
             # (single-school districts — "Wallkill Valley Regional High School is
