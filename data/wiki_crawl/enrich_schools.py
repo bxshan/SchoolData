@@ -61,8 +61,8 @@ ENRICHED_FIELDS = ["title", "url", "pageid", "state", "level", "description",
                    "instance_of", "founded", "website", "school_district",
                    "nces_id", "postal_code", "wikidata_qid", "lat", "lon",
                    "pageviews_60d", "thumbnail", "source_category", "validation",
-                   "redirect_to", "country", "dissolved", "operating",
-                   "validation_note"]
+                   "redirect_to", "defunct_category", "country", "dissolved",
+                   "operating", "validation_note"]
 ACCREDITATION = re.compile(r"accredit|commission on|association of", re.I)
 
 
@@ -247,6 +247,8 @@ def resolve_and_enrich(session, rows, delay):
                 "source_category": sc,
                 "validation": val.get(orig, ""),
                 "redirect_to": "",
+                "defunct_category": "1" if DEFUNCT_CATEGORY.search(
+                    " | ".join([sc] + [c["title"] for c in page.get("categories", [])])) else "",
                 "country": "", "dissolved": "", "operating": "",
                 "validation_note": "",
             }
@@ -395,6 +397,12 @@ HISTORIC_P31 = re.compile(
     r"school building|one-room school|rosenwald school|schoolhouse|former school",
     re.I)
 FORMER_DESC = re.compile(r"\b(former|defunct|closed)\b", re.I)
+# A page in any closed-school category ("Defunct high schools in Ohio",
+# "Educational institutions disestablished in 1971", ...). Wikidata often lacks
+# a dissolution date for these, so the crawl tags many of them `school`.
+DEFUNCT_CATEGORY = re.compile(
+    r"\b(defunct|former|closed|demolished)\b[^|]*\b(schools?|academ|institutions?)|"
+    r"disestablished in \d{4}|disestablishments in", re.I)
 
 
 class NcesLocator:
@@ -450,7 +458,8 @@ def revalidate(records, locator=None):
         # 2. operating: no when dissolved, a historic building type, or described as former
         if rec["validation"] not in ("redirect",):
             closed = (rec.get("dissolved") or HISTORIC_P31.search(inst)
-                      or FORMER_DESC.search(desc) or rec["validation"] == "defunct")
+                      or FORMER_DESC.search(desc) or rec.get("defunct_category")
+                      or rec["validation"] == "defunct")
             rec["operating"] = "no" if closed else "yes"
 
         # 3. validation fixes
@@ -467,6 +476,9 @@ def revalidate(records, locator=None):
         elif v == "school" and NETWORK.search(desc):
             rec["validation"] = "out_of_scope"
             notes.append("network/district: " + NETWORK.search(desc).group(0))
+        elif v == "school" and rec.get("defunct_category"):
+            rec["validation"] = "defunct"
+            notes.append("in a defunct/closed-school category")
         elif v == "unverified" and rec["wikidata_qid"] and SCHOOLISH_DESC.search(desc) \
                 and not NETWORK.search(desc) and not HIGHER_ED.search(desc):
             rec["validation"] = "school"

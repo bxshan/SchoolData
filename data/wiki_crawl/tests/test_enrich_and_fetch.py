@@ -118,3 +118,18 @@ def test_revalidate_operating_flag():
 def test_revalidate_fills_state_from_description():
     r = _reval(state="", description="Public elementary school in Queens, New York")
     assert r["state"] == "New York" and "description" in r["validation_note"]
+
+
+def test_defunct_category_detection():
+    hit = lambda cats: bool(e.DEFUNCT_CATEGORY.search(" | ".join(cats)))   # noqa: E731
+    assert hit(["Category:Defunct high schools in Ohio"])
+    assert hit(["Category:Educational institutions disestablished in 1971"])
+    assert hit(["Category:Former Catholic schools in New York"])
+    assert not hit(["Category:High schools in Ohio", "Category:Schools in Ohio"])
+    # words from two different categories must not combine
+    assert not hit(["Category:Former municipalities in Ohio", "Category:High schools in Ohio"])
+
+
+def test_school_in_defunct_category_becomes_defunct():
+    r = _reval(defunct_category="1")
+    assert r["validation"] == "defunct" and r["operating"] == "no"
