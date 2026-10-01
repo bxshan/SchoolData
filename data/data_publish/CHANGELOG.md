@@ -46,7 +46,7 @@ Rebuilt from scratch with a pipeline that now lives entirely in the source repos
 ### Inputs
 | Input | Provenance |
 |---|---|
-| Source repository | the commit tagged `v0.2` (exact hash and a clean-tree flag in `build_manifest.json`); data rebuilt from scratch at `fb79f08`, release built after this changelog was added |
+| Source repository | the commit tagged `v0.2` (exact hash and a clean-tree flag in `build_manifest.json`); data rebuilt from scratch at `2ffc94a`, release built after this changelog was added |
 | NCES master | `data/nces_crawl/output_all_schools/all_schools_master.csv`, sha256 `1bd68f4f…` — CCD 2024-25 bulk files (`ccd_sch_029/052/059/033_2425`, EDGE 2425), PSS 2023-24 |
 | Wikipedia crawl | category tree crawled 2026-09-30 with `--include-defunct` — 24,048 candidates, Wikidata-tagged |
 | Matches | `data_publish/output/wiki_nces_matches.csv`, sha256 `0fc09a85…` — 15,164 matches |
@@ -73,6 +73,9 @@ Full sha256 values and counts are in `build_manifest.json` from the build.
   tiers, school-type words must agree ("Blue Valley Academy" is not "Blue Valley Virtual
   Program"), and a program housed in a school is not that school's article.
 - **One article per school:** strongest tier, then score, then pageviews.
+- 15,164 matches give 15,163 rows of Wikipedia text: Glynn Academy (GA) is matched,
+  but its article is hidden behind a full-page copyright-investigation notice, so
+  Wikipedia returns no text and the row keeps its NCES text.
 - Unmatched verified schools are listed with a reason in `wiki_unmatched.csv`
   (1,648 open schools with no NCES record or a very different name; 1,500 closed or
   historic; 60 lost to a stronger match; 12 with no location).
