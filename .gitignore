@@ -17,11 +17,7 @@ env/
 .vscode/
 .idea/
 
-# Training artifacts (checkpoints, tensorboard logs, etc.)
-outputs/
-*.ckpt
-events.out.tfevents.*
-
+# NCES search exports and JSONL pipeline outputs
 *.xls
 *.jsonl
 
@@ -35,9 +31,6 @@ data/nces_crawl/private_school_downloads/
 data/nces_crawl/bulk_downloads/
 data/wiki_crawl/output/
 data/data_publish/output/
-
-# Local scratch runner (hardcoded absolute paths)
-data/wiki_crawl/run.sh
 
 # wiki_crawl regenerable intermediates
 data/wiki_crawl/schools_new*
