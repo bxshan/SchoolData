@@ -3,8 +3,10 @@
 # Each case here is a bug found while cross-checking the bulk build against the
 # CCD search-tool export (2026-09).
 import csv
+import io
 import os
 import sys
+import zipfile
 
 import pytest
 
@@ -26,25 +28,25 @@ def _school(sid, **kw):
     return {**base, **kw}
 
 
-def _write(dirpath, name, header, rows, delimiter=","):
-    os.makedirs(dirpath, exist_ok=True)
-    with open(os.path.join(dirpath, name), "w", newline="", encoding="utf-8") as fh:
-        w = csv.writer(fh, delimiter=delimiter)
-        if header:
-            w.writerow(header)
-        w.writerows(rows)
+def _write(zip_path, name, header, rows, delimiter=","):
+    buf = io.StringIO()
+    w = csv.writer(buf, delimiter=delimiter)
+    if header:
+        w.writerow(header)
+    w.writerows(rows)
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("readme.sas7bdat", "")          # NCES zips carry other members too
+        zf.writestr(name, buf.getvalue().encode("utf-8"))
 
 
 @pytest.fixture
 def bulk(tmp_path, monkeypatch):
-    """Lay out extracted bulk files the way _zip_reader expects them."""
+    """Write small zips named like the real NCES files into a temp BULK dir."""
     monkeypatch.setattr(b, "BULK", str(tmp_path))
     monkeypatch.setattr(b, "PUBLIC_OUT", str(tmp_path / "public.csv"))
 
     def build(schools, membership, staff, edge):
-        for key in ("directory", "membership", "staff", "lunch", "edge_public"):
-            open(tmp_path / os.path.basename(b.FILES[key]), "w").close()   # the zip
-        d = lambda key: str(tmp_path / os.path.basename(b.FILES[key])[:-4])  # noqa: E731
+        d = lambda key: str(tmp_path / os.path.basename(b.FILES[key]))  # noqa: E731
         _write(d("directory"), "dir.csv", DIR_COLS, [[s[c] for c in DIR_COLS] for s in schools])
         _write(d("membership"), "m.csv", ["NCESSCH", "GRADE", "STUDENT_COUNT", "TOTAL_INDICATOR"],
                membership)

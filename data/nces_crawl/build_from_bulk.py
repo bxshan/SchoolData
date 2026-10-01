@@ -36,7 +36,7 @@ Usage:
 
 import argparse
 import csv
-import glob
+import io
 import os
 import subprocess
 import sys
@@ -99,20 +99,22 @@ def _zip_reader(url, suffix=".csv", delimiter=",", fieldnames=None):
     """Stream rows of the first `suffix` member of a downloaded zip.
 
     Some NCES zips (the 190 MB membership file) use Deflate64, which Python's
-    zipfile can't read, so members are extracted with the system `unzip` into
-    bulk_downloads/<zip name>/ and read from there."""
+    zipfile can't read, so the member is piped through the system `unzip -p`
+    rather than extracted (the membership CSV alone is 4.7 GB on disk)."""
     path = os.path.join(BULK, os.path.basename(url))
     if not os.path.exists(path):
         sys.exit(f"missing {path} — run with --download")
-    outdir = path[:-len(".zip")]
-    found = glob.glob(os.path.join(outdir, "*" + suffix)) + \
-        glob.glob(os.path.join(outdir, "*" + suffix.lower()))
-    if not found:
-        subprocess.run(["unzip", "-oq", path, "-d", outdir], check=True)
-        found = glob.glob(os.path.join(outdir, "*" + suffix)) + \
-            glob.glob(os.path.join(outdir, "*" + suffix.lower()))
-    fh = open(found[0], encoding="utf-8", newline="")   # EDGE has UTF-8 names (PR)
-    return csv.DictReader(fh, delimiter=delimiter, fieldnames=fieldnames)
+    members = subprocess.run(["unzip", "-Z1", path], capture_output=True, text=True,
+                             check=True).stdout.splitlines()
+    member = next((m for m in members if m.lower().endswith(suffix.lower())), None)
+    if member is None:
+        sys.exit(f"no *{suffix} file in {path}")
+    proc = subprocess.Popen(["unzip", "-p", path, member], stdout=subprocess.PIPE)
+    fh = io.TextIOWrapper(proc.stdout, encoding="utf-8", newline="")  # EDGE has UTF-8 names (PR)
+    yield from csv.DictReader(fh, delimiter=delimiter, fieldnames=fieldnames)
+    fh.close()
+    if proc.wait() != 0:
+        sys.exit(f"unzip failed on {path} ({member}): exit {proc.returncode}")
 
 
 def _num(v):
