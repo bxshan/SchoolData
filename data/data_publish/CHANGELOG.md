@@ -46,7 +46,7 @@ Rebuilt from scratch with a pipeline that now lives entirely in the source repos
 ### Inputs
 | Input | Provenance |
 |---|---|
-| Source repository | commit `fb79f08` (clean working tree) |
+| Source repository | the commit tagged `v0.2` (exact hash and a clean-tree flag in `build_manifest.json`); data rebuilt from scratch at `fb79f08`, release built after this changelog was added |
 | NCES master | `data/nces_crawl/output_all_schools/all_schools_master.csv`, sha256 `1bd68f4f…` — CCD 2024-25 bulk files (`ccd_sch_029/052/059/033_2425`, EDGE 2425), PSS 2023-24 |
 | Wikipedia crawl | category tree crawled 2026-09-30 with `--include-defunct` — 24,048 candidates, Wikidata-tagged |
 | Matches | `data_publish/output/wiki_nces_matches.csv`, sha256 `0fc09a85…` — 15,164 matches |
