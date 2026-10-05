@@ -41,8 +41,8 @@ body {
 }
 .brand { font-size: 21px; font-weight: 600; letter-spacing: -0.02em; }
 .brand .tagline { display: block; margin-top: 3px; max-width: 520px;
-  font-size: 13px; font-weight: 700; line-height: 1.4; letter-spacing: 0.06em;
-  text-transform: uppercase; color: var(--ink); }
+  font-size: 14px; font-weight: 500; line-height: 1.4; letter-spacing: 0;
+  color: var(--ink); }
 .brand .tagline b { color: var(--red); font-weight: 700; }
 
 /* search */
@@ -300,7 +300,7 @@ a { color: var(--accent); text-decoration: none; }
 .about > section { padding: 52px 24px; text-align: center; }
 .about-band { background: var(--bg); }
 .about h1 { font-size: clamp(36px, 6vw, 60px); line-height: 1.05; font-weight: 700;
-  letter-spacing: -0.02em; text-transform: uppercase; margin: 0 0 16px; }
+  letter-spacing: -0.035em; margin: 0 0 16px; }
 .about h2 { font-size: clamp(26px, 4vw, 36px); line-height: 1.1; font-weight: 700;
   letter-spacing: -0.03em; margin: 0 0 12px; }
 .about p { max-width: 680px; margin: 0 auto 12px; font-size: 17px; line-height: 1.45;
