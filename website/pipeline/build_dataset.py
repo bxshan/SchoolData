@@ -10,6 +10,10 @@ JSON the Next.js/Deck.gl frontend loads as a static asset.
 
 `has_wikipedia` is an EXACT join on the NCES school id against the audited
 Wikipedia<->NCES matcher output (data/data_publish/output/wiki_nces_matches.csv).
+It means "an article about this school exists", so it can exceed the dataset's
+from_wikipedia count by matched articles whose text is unusable (e.g. Glynn
+Academy, hidden behind a copyright-investigation notice) — those schools need no
+new article, but the dataset falls back to NCES text for them.
 
 This is the "local heavy-lifting / write side": run it locally, commit the
 output, and Vercel serves it from its CDN — the browser never queries a database
@@ -42,7 +46,7 @@ DEFAULT_MASTER = os.path.join(DATA, "nces_crawl", "output_all_schools", "all_sch
 DEFAULT_COORDS = os.path.join(DATA, "nces_crawl", "output_all_schools", "school_coordinates.csv")
 OUT = os.path.join(HERE, "..", "web", "public", "data", "schools.json")
 
-PSS_LEVEL = {"1": "elementary", "2": "high", "3": "combined", "-1": "other"}
+PSS_LEVEL = {"1": "elementary", "2": "high"}  # else "other" (combined/unknown)
 # NCES grade-offered codes in numeric form: -1 PK, 0 K, 1-12, 13.
 GRADE = {-1: "PK", 0: "K", 13: "13"}
 _MASTER_GRADE = {"PK": -1, "KG": 0}
@@ -93,22 +97,20 @@ def _master_grade(code):
 
 
 def _span_level(lo, hi):
-    """Map level from a public grade span (the bulk directory's own LEVEL isn't
-    in the master): elementary <= 5, middle 6-8, high >= 9, else other."""
+    """Map level from a grade span, by the HIGHEST grade offered: a school that
+    reaches grade 9+ is "high" (so 7-12 and K-12 count as high schools), 6-8
+    "middle", up to 5 "elementary". `lo` is unused; "other" when unknown."""
     order = {"PK": -1, "K": 0}
     try:
-        a, b = order.get(lo, None), order.get(hi, None)
-        a = int(lo) if a is None else a
+        b = order.get(hi, None)
         b = int(hi) if b is None else b
     except ValueError:
         return "other"
     if b <= 5:
         return "elementary"
-    if a >= 6 and b <= 8:
+    if b <= 8:
         return "middle"
-    if a >= 9:
-        return "high"
-    return "other"
+    return "high"
 
 
 def load_coords(path):
@@ -158,7 +160,9 @@ def rows_from_master(master_path, coords):
             else:
                 gl, gh = _private_grades(r)
                 row.update({"pv": 1, "d": "",
-                            "lv": PSS_LEVEL.get(r.get("PSS_LEVEL", "").strip(), "other"),
+                            # grade span first; PSS's own level only when grades are blank
+                            "lv": (_span_level(gl, gh) if gh else
+                                   PSS_LEVEL.get(r.get("PSS_LEVEL", "").strip(), "other")),
                             "ph": _phone(r.get("phone", "")), "tf": _enroll(r.get("teachers")),
                             "gl": gl, "gh": gh})
             row.update({"w": 0, "x": round(lon, 5), "y": round(lat, 5)})
@@ -188,9 +192,11 @@ def write_outputs(out_path, rows):
 
     # By-state and by-county coverage for the zoomed-out choropleth (tiny files
     # the frontend loads first; the big point file loads lazily on zoom).
-    def aggregate(key):
+    def aggregate(key, level=None):
         agg = {}
         for s in rows:
+            if level and s["lv"] != level:
+                continue
             k = s[key]
             if not k:
                 continue
@@ -206,6 +212,14 @@ def write_outputs(out_path, rows):
         json.dump(state_agg, fh, separators=(",", ":"))
     with open(os.path.join(outdir, "county_coverage.json"), "w", encoding="utf-8") as fh:
         json.dump(county_agg, fh, separators=(",", ":"))
+
+    # Same aggregates split by school level ({level: {key: [total, has_wiki]}}),
+    # so the map can show e.g. high-school coverage only.
+    levels = sorted({s["lv"] for s in rows})
+    for name, key in (("state", "s"), ("county", "c")):
+        by_level = {lv: aggregate(key, lv) for lv in levels}
+        with open(os.path.join(outdir, f"{name}_coverage_by_level.json"), "w", encoding="utf-8") as fh:
+            json.dump(by_level, fh, separators=(",", ":"))
     return state_agg, county_agg
 
 

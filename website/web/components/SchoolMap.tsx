@@ -6,6 +6,7 @@ import { ScatterplotLayer, GeoJsonLayer } from "@deck.gl/layers";
 import { FlyToInterpolator } from "@deck.gl/core";
 import { Map as BaseMap } from "react-map-gl/maplibre";
 import * as topojson from "topojson-client";
+import Link from "next/link";
 import ContributorPanel from "./ContributorPanel";
 import MyContributions from "./MyContributions";
 import { supabase } from "../lib/supabase";
@@ -40,10 +41,20 @@ const RAMP: [number, [number, number, number]][] = [
   [0.25, [166, 217, 106]],
   [0.4, [102, 189, 99]],
 ];
-function covColor(frac: number): [number, number, number] {
-  for (const [b, c] of RAMP) if (frac < b) return c;
+// School-level filter. Coverage differs a lot by level (high schools ~54%,
+// elementary/middle ~1%), so the color ramp is rescaled per level.
+const LEVELS: { key: string; label: string; scale: number }[] = [
+  { key: "all", label: "All", scale: 1 },
+  { key: "high", label: "High", scale: 2 },
+  { key: "middle", label: "Middle", scale: 0.15 },
+  { key: "elementary", label: "Elementary", scale: 0.15 },
+  { key: "other", label: "Unknown Grades", scale: 0.4 },
+];
+function covColor(frac: number, scale = 1): [number, number, number] {
+  for (const [b, c] of RAMP) if (frac < b * scale) return c;
   return [26, 152, 80];
 }
+const pctLabel = (v: number) => `${+(v * 100).toFixed(v < 0.1 ? 1 : 0)}%`;
 
 const NAME2ABBR: Record<string, string> = {
   Alabama: "AL", Alaska: "AK", Arizona: "AZ", Arkansas: "AR", California: "CA",
@@ -64,12 +75,16 @@ const NAME2ABBR: Record<string, string> = {
 };
 
 type Agg = Record<string, [number, number]>; // key -> [total, has]
+type AggByLevel = Record<string, Agg>; // level -> key -> [total, has]
 type FC = { type: "FeatureCollection"; features: any[] };
 
 export default function SchoolMap() {
   const [view, setView] = useState<any>(INITIAL_VIEW_STATE);
   const [stateAgg, setStateAgg] = useState<Agg>({});
   const [countyAgg, setCountyAgg] = useState<Agg>({});
+  const [stateByLevel, setStateByLevel] = useState<AggByLevel>({});
+  const [countyByLevel, setCountyByLevel] = useState<AggByLevel>({});
+  const [level, setLevel] = useState("all");
   const [statesGeo, setStatesGeo] = useState<FC | null>(null);
   const [countiesGeo, setCountiesGeo] = useState<FC | null>(null);
   const [points, setPoints] = useState<School[] | null>(null);
@@ -107,6 +122,8 @@ export default function SchoolMap() {
     loadContribCount();
     fetch("/data/state_coverage.json").then((r) => r.json()).then(setStateAgg);
     fetch("/data/county_coverage.json").then((r) => r.json()).then(setCountyAgg);
+    fetch("/data/state_coverage_by_level.json").then((r) => r.json()).then(setStateByLevel);
+    fetch("/data/county_coverage_by_level.json").then((r) => r.json()).then(setCountyByLevel);
     fetch("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json")
       .then((r) => r.json())
       .then((us) => setStatesGeo(topojson.feature(us, us.objects.states) as any));
@@ -167,11 +184,20 @@ export default function SchoolMap() {
     setQuery(""); setSearchFocused(false);
   }
 
+  // aggregates and points for the selected level ("all" = everything)
+  const scale = LEVELS.find((l) => l.key === level)?.scale ?? 1;
+  const stateView: Agg = level === "all" ? stateAgg : stateByLevel[level] ?? {};
+  const countyView: Agg = level === "all" ? countyAgg : countyByLevel[level] ?? {};
+  const levelPoints = useMemo(
+    () => (points && level !== "all" ? points.filter((p) => p.lv === level) : points),
+    [points, level]
+  );
+
   const national = useMemo(() => {
     let total = 0, has = 0;
-    for (const k in stateAgg) { total += stateAgg[k][0]; has += stateAgg[k][1]; }
+    for (const k in stateView) { total += stateView[k][0]; has += stateView[k][1]; }
     return { total, has, missing: total - has, pct: total ? (100 * has) / total : 0 };
-  }, [stateAgg]);
+  }, [stateView]);
 
   function flyTo(info: any, z: number) {
     if (!info?.coordinate) return;
@@ -190,14 +216,14 @@ export default function SchoolMap() {
         visible: showStates,
         stroked: true, filled: true,
         getFillColor: (f: any) => {
-          const a = stateAgg[NAME2ABBR[f.properties.name]];
-          return a ? [...covColor(a[1] / a[0]), 200] : [...NO_DATA, 90];
+          const a = stateView[NAME2ABBR[f.properties.name]];
+          return a && a[0] ? [...covColor(a[1] / a[0], scale), 200] : [...NO_DATA, 90];
         },
         getLineColor: [255, 255, 255, 230],
         getLineWidth: 1, lineWidthUnits: "pixels",
         pickable: true,
         onClick: (info) => flyTo(info, 5.6),
-        updateTriggers: { getFillColor: [stateAgg] },
+        updateTriggers: { getFillColor: [stateView, scale] },
       }),
     countiesGeo &&
       new GeoJsonLayer({
@@ -206,19 +232,19 @@ export default function SchoolMap() {
         visible: showCounties,
         stroked: true, filled: true,
         getFillColor: (f: any) => {
-          const a = countyAgg[f.id];
-          return a ? [...covColor(a[1] / a[0]), 205] : [...NO_DATA, 70];
+          const a = countyView[f.id];
+          return a && a[0] ? [...covColor(a[1] / a[0], scale), 205] : [...NO_DATA, 70];
         },
         getLineColor: [255, 255, 255, 200],
         getLineWidth: 0.5, lineWidthUnits: "pixels",
         pickable: true,
         onClick: (info) => flyTo(info, 8.5),
-        updateTriggers: { getFillColor: [countyAgg] },
+        updateTriggers: { getFillColor: [countyView, scale] },
       }),
-    points &&
+    levelPoints &&
       new ScatterplotLayer<School>({
         id: "schools",
-        data: points,
+        data: levelPoints,
         visible: showPoints,
         getPosition: (d) => [d.x, d.y],
         getFillColor: (d) => (d.w ? [34, 197, 94] : [239, 68, 68]),
@@ -263,8 +289,8 @@ export default function SchoolMap() {
           }
           const isState = layer?.id === "states";
           const name = object.properties?.name + (isState ? "" : " County");
-          const a = isState ? stateAgg[NAME2ABBR[object.properties.name]] : countyAgg[object.id];
-          if (!a) return tip(`<b>${name}</b><br/>no data`);
+          const a = isState ? stateView[NAME2ABBR[object.properties.name]] : countyView[object.id];
+          if (!a || !a[0]) return tip(`<b>${name}</b><br/>no data`);
           const pct = ((100 * a[1]) / a[0]).toFixed(1);
           return tip(
             `<b>${name}</b><br/>${pct}% on Wikipedia<br/>` +
@@ -328,8 +354,11 @@ export default function SchoolMap() {
           )}
         </div>
 
+        <Link href="/about" className="about-link" style={{ marginLeft: "auto" }}>
+          About
+        </Link>
         <button
-          className="account-btn"
+          className="account-btn" style={{ marginLeft: 0 }}
           onClick={() => { setSelected(null); setShowAccount(true); loadPoints(); }}
         >
           My contributions
@@ -339,7 +368,9 @@ export default function SchoolMap() {
       <div className="stats">
         <div className="stat">
           <div className="v">{national.total.toLocaleString()}</div>
-          <div className="k">US K-12 schools</div>
+          <div className="k">
+            {level === "all" ? "US K-12 schools" : `US ${LEVELS.find((l) => l.key === level)?.label.toLowerCase()} schools`}
+          </div>
         </div>
         <div className="stat">
           <div className="v red">{national.missing.toLocaleString()}</div>
@@ -353,6 +384,18 @@ export default function SchoolMap() {
           <div className="v blue">{contribCount == null ? "—" : contribCount.toLocaleString()}</div>
           <div className="k">Contributions to SchoolData</div>
         </div>
+      </div>
+
+      <div className="filters level-filter">
+        {LEVELS.map((l) => (
+          <button
+            key={l.key}
+            className={level === l.key ? "active" : ""}
+            onClick={() => setLevel(l.key)}
+          >
+            {l.label}
+          </button>
+        ))}
       </div>
 
       <div className="legend">
@@ -370,9 +413,10 @@ export default function SchoolMap() {
             <div className="legend-title">% of schools with a Wikipedia article</div>
             <div className="ramp">
               {[
-                ["0%", "#a50026"], ["3%", "#d73027"], ["6%", "#fc8d59"],
-                ["10%", "#fee08b"], ["16%", "#a6d96a"], ["25%", "#66bd63"],
-                ["40%+", "#1a9850"],
+                ...RAMP.map(([, c], i) => [
+                  pctLabel(i ? RAMP[i - 1][0] * scale : 0), `rgb(${c.join(",")})`,
+                ]),
+                [`${pctLabel(RAMP[RAMP.length - 1][0] * scale)}+`, "#1a9850"],
               ].map(([lbl, c]) => (
                 <div key={lbl} className="swatch">
                   <span style={{ background: c as string }} />

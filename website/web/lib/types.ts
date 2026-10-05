@@ -8,7 +8,7 @@ export type School = {
   a?: string;          // street address
   z?: string;          // ZIP
   d?: string;          // district (public only)
-  lv: string;          // elementary | middle | high | combined | other
+  lv: string;          // by highest grade offered: elementary (<=5) | middle (6-8) | high (9+) | other (unknown)
   e: number | null;    // enrollment
   ph?: string;         // phone
   tf?: number | null;  // teachers (FTE)

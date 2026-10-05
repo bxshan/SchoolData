@@ -41,8 +41,8 @@ body {
 }
 .brand { font-size: 21px; font-weight: 600; letter-spacing: -0.02em; }
 .brand .tagline { display: block; margin-top: 3px; max-width: 520px;
-  font-size: 14px; font-weight: 500; line-height: 1.4; letter-spacing: 0;
-  color: var(--ink); }
+  font-size: 13px; font-weight: 700; line-height: 1.4; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink); }
 .brand .tagline b { color: var(--red); font-weight: 700; }
 
 /* search */
@@ -289,3 +289,49 @@ a { color: var(--accent); text-decoration: none; }
 .ed-actions { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
 .ed-actions .cta { margin-top: 0; flex: 1; }
 .ed-link { font-size: 14px; white-space: nowrap; }
+
+/* school-level filter, centered under the top bar */
+.level-filter { position: absolute; top: 92px; left: 50%; transform: translateX(-50%);
+  z-index: 10; box-shadow: var(--shadow); }
+
+/* about page — the map page locks body scroll, so this scrolls on its own */
+.about { position: fixed; inset: 0; overflow-y: auto; background: #fff;
+  -webkit-overflow-scrolling: touch; }
+.about > section { padding: 52px 24px; text-align: center; }
+.about-band { background: var(--bg); }
+.about h1 { font-size: clamp(36px, 6vw, 60px); line-height: 1.05; font-weight: 700;
+  letter-spacing: -0.02em; text-transform: uppercase; margin: 0 0 16px; }
+.about h2 { font-size: clamp(26px, 4vw, 36px); line-height: 1.1; font-weight: 700;
+  letter-spacing: -0.03em; margin: 0 0 12px; }
+.about p { max-width: 680px; margin: 0 auto 12px; font-size: 17px; line-height: 1.45;
+  color: var(--muted); }
+.about .lead { font-size: 18px; color: var(--ink); }
+.about .muted { font-size: 14px; }
+.about-nav { position: sticky; top: 0; z-index: 5; display: flex;
+  justify-content: space-between; padding: 14px 24px; font-size: 14px;
+  background: rgba(255,255,255,.72); backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur); border-bottom: 1px solid var(--border); }
+.about-nav a { color: var(--accent); text-decoration: none; }
+.about-nav span { font-weight: 600; }
+.about-hero { padding-top: 64px !important; }
+.about-hero p { font-size: 20px; color: var(--ink); }
+.about-stats { display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 32px; margin: 28px 0; }
+.about-stats div { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
+.about-stats b { font-size: clamp(32px, 5vw, 48px); font-weight: 700;
+  letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.about-stats b.green { color: var(--green); }
+.about-stats b.red { color: var(--red); }
+.about-stats span { font-size: 15px; color: var(--muted); }
+.about-contact p { font-size: 16px; }
+.about-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 24px; }
+.about-links a { color: var(--accent); text-decoration: none; font-size: 17px; }
+.about-links a:hover { text-decoration: underline; }
+.about-link { background: var(--panel-solid); border: 1px solid var(--border);
+  border-radius: 980px; padding: 8px 16px; font-size: 13px; font-weight: 500;
+  color: var(--ink); text-decoration: none; box-shadow: var(--shadow); white-space: nowrap; }
+.about-link:hover { border-color: var(--accent); color: var(--accent); }
+.about-cta { display: inline-block; margin: 4px 0 20px; padding: 10px 24px;
+  border-radius: 980px; background: var(--accent); color: #fff; font-size: 16px;
+  font-weight: 500; text-decoration: none; }
+.about-cta:hover { background: #0077ed; }
