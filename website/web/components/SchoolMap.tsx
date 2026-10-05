@@ -48,7 +48,7 @@ const LEVELS: { key: string; label: string; scale: number }[] = [
   { key: "high", label: "High", scale: 2 },
   { key: "middle", label: "Middle", scale: 0.15 },
   { key: "elementary", label: "Elementary", scale: 0.15 },
-  { key: "other", label: "Unknown Grades", scale: 0.4 },
+  { key: "other", label: "Unknown grades", scale: 0.4 },
 ];
 function covColor(frac: number, scale = 1): [number, number, number] {
   for (const [b, c] of RAMP) if (frac < b * scale) return c;
