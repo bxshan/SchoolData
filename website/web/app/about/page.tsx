@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import stateCoverage from "../../public/data/state_coverage.json";
+import { pageStates, stateName, statePath } from "../../lib/schools";
 
 export const metadata: Metadata = {
   title: "About — SchoolData",
@@ -78,6 +79,9 @@ export default function About() {
           <a href="https://github.com/bxshan/SchoolData">GitHub</a>
           <a href="https://huggingface.co/datasets/SchoolData/us-k12-schools">Dataset</a>
           <a href="http://www.opendata.school">opendata.school</a>
+          {pageStates().map((s) => (
+            <Link key={s} href={statePath(s)}>{stateName(s)} schools</Link>
+          ))}
         </p>
       </section>
     </main>

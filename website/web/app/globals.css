@@ -335,3 +335,16 @@ a { color: var(--accent); text-decoration: none; }
   border-radius: 980px; background: var(--accent); color: #fff; font-size: 16px;
   font-weight: 500; text-decoration: none; }
 .about-cta:hover { background: #0077ed; }
+
+/* school and state pages — reuse the about layout, left-align the content */
+.school-body { text-align: left !important; max-width: 760px; margin: 0 auto; }
+.school-body p, .school-body h2 { margin-left: 0; }
+.school-facts { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 16px; }
+.school-facts th, .school-facts td { padding: 8px 0; border-bottom: 1px solid var(--border);
+  text-align: left; vertical-align: top; }
+.school-facts th { width: 160px; font-weight: 500; color: var(--muted); }
+.school-body a { color: var(--accent); text-decoration: none; }
+.school-body a:hover { text-decoration: underline; }
+.school-city h3 { font-size: 17px; margin: 24px 0 6px; }
+.school-list { list-style: none; padding: 0; margin: 0; columns: 2 260px; column-gap: 24px;
+  font-size: 15px; line-height: 1.7; }

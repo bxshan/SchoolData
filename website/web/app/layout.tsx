@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SITE_URL } from "../lib/schools";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "SchoolData — the US K-12 Wikipedia data desert",
   description:
     "Every US K-12 school (public + private) on one map. Red = no Wikipedia article yet. " +
