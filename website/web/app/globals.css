@@ -348,3 +348,17 @@ a { color: var(--accent); text-decoration: none; }
 .school-city h3 { font-size: 17px; margin: 24px 0 6px; }
 .school-list { list-style: none; padding: 0; margin: 0; columns: 2 260px; column-gap: 24px;
   font-size: 15px; line-height: 1.7; }
+.school-facts-sourced thead th, .school-facts-sourced thead td { font-size: 13px;
+  font-weight: 500; color: var(--muted); }
+.school-facts-sourced td { padding-right: 16px; }
+.school-sources { width: 180px; font-size: 13px; }
+.school-sources a { display: block; }
+@media (max-width: 600px) {
+  .school-facts-sourced th, .school-sources { width: auto; }
+  .school-facts-sourced, .school-facts-sourced tbody, .school-facts-sourced tr,
+  .school-facts-sourced th, .school-facts-sourced td { display: block; }
+  .school-facts-sourced thead { display: none; }
+  .school-facts-sourced th { border-bottom: 0; padding-bottom: 0; }
+  .school-facts-sourced td { border-bottom: 0; padding: 2px 0; }
+  .school-facts-sourced tr { border-bottom: 1px solid var(--border); padding: 6px 0; }
+}

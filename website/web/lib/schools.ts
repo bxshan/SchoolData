@@ -44,6 +44,30 @@ export function getWikidata(id: string): WikidataFacts | undefined {
   return wikidata[id];
 }
 
+// Facts compiled per school from public sources, each with its source links (see
+// build_fact_sheets.py). Not yet confirmed by the school.
+export type FactSheet = {
+  asOf: string;
+  facts: { f: string; v: string; s: [string, string][] }[];
+  missing: string[];
+};
+
+let factSheets: Record<string, FactSheet> | null = null;
+
+export function getFactSheet(id: string): FactSheet | undefined {
+  if (!factSheets) {
+    const file = path.join(process.cwd(), "public/data/school_fact_sheets.json");
+    factSheets = fs.existsSync(file)
+      ? (JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, FactSheet>)
+      : {};
+  }
+  return factSheets[id];
+}
+
+export function factValue(sheet: FactSheet | undefined, fact: string): string | undefined {
+  return sheet?.facts.find((x) => x.f === fact)?.v;
+}
+
 let byId: Map<string, School> | null = null;
 
 export function getSchool(id: string): School | undefined {
@@ -145,7 +169,8 @@ export function describe(s: School): string {
   const grades = gradeRange(s);
   const serve: string[] = [];
   if (grades) serve.push(`serves ${grades}`);
-  if (s.e != null) serve.push(`enrolls ${s.e.toLocaleString("en-US")} students`);
+  // Year on the count: fact sheets can show another year's figure on the same page.
+  if (s.e != null) serve.push(`enrolls ${s.e.toLocaleString("en-US")} students (${s.pv ? "2023–24" : "2024–25"})`);
   if (serve.length) parts.push(`It ${serve.join(" and ")}.`);
   return parts.join(" ");
 }
