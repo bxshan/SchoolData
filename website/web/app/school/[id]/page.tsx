@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  SITE_URL, cityKey, describe, getSchool, pageSchools, schemaType, schoolPath,
+  SITE_URL, cityKey, describe, getSchool, getWikidata, pageSchools, schemaType, schoolPath,
   schoolsInState, sectorLabel, source, stateName, statePath, wikipediaUrl,
 } from "../../../lib/schools";
 
@@ -29,6 +29,9 @@ export default function SchoolPage({ params }: { params: { id: string } }) {
   if (!s) notFound();
 
   const wiki = wikipediaUrl(s);
+  const wd = getWikidata(s.i);
+  const wdUrl = wd && `https://www.wikidata.org/wiki/${wd.q}`;
+  const sameAs = [wiki, wdUrl, wd?.u].filter((u): u is string => Boolean(u));
   const nearby = schoolsInState(s.s).filter((o) => cityKey(o.ci) === cityKey(s.ci) && o.i !== s.i).slice(0, 12);
 
   const jsonLd = {
@@ -48,11 +51,13 @@ export default function SchoolPage({ params }: { params: { id: string } }) {
     },
     geo: { "@type": "GeoCoordinates", latitude: s.y, longitude: s.x },
     ...(s.ph && { telephone: s.ph }),
-    ...(wiki && { sameAs: [wiki] }),
+    ...(wd?.f && { foundingDate: wd.f }),
+    ...(sameAs.length && { sameAs }),
   };
 
   const facts: [string, string][] = [
     ["Type", sectorLabel(s)],
+    ...(wd?.f ? [["Founded", `${wd.f} (Wikidata)`] as [string, string]] : []),
     ["Grades", s.gl && s.gh ? (s.gl === s.gh ? s.gl : `${s.gl}–${s.gh}`) : "Unknown"],
     ["Enrollment", s.e != null ? s.e.toLocaleString("en-US") : "Unknown"],
     ...(s.tf != null ? [["Teachers (FTE)", String(s.tf)] as [string, string]] : []),
@@ -82,9 +87,15 @@ export default function SchoolPage({ params }: { params: { id: string } }) {
             {facts.map(([k, v]) => (
               <tr key={k}><th>{k}</th><td>{v}</td></tr>
             ))}
+            {wd?.u && (
+              <tr><th>Website</th><td><a href={wd.u} rel="nofollow">{wd.u.replace(/^https?:\/\//, "").replace(/\/$/, "")}</a> (Wikidata)</td></tr>
+            )}
           </tbody>
         </table>
-        <p className="muted">Source: {source(s)}. Federal public-domain data.</p>
+        <p className="muted">
+          Source: {source(s)}. Federal public-domain data.
+          {wd && <> Founding year and website, where shown: <a href={wdUrl}>Wikidata {wd.q}</a> (CC0).</>}
+        </p>
         {wiki ? (
           <p>Wikipedia: <a href={wiki}>{s.wt}</a></p>
         ) : (

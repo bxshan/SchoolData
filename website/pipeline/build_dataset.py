@@ -26,7 +26,14 @@ Output: web/public/data/schools.json
      (public only), pv: 1 (private only), w: 0|1 (has_wikipedia),
      wt: matched Wikipedia article title (when w=1), x: lon, y: lat }, ...]
   gl/gh are blank when NCES has no grade span; nothing is guessed.
-plus state_coverage.json and county_coverage.json aggregates.
+plus state_coverage.json and county_coverage.json aggregates, and
+school_wikidata.json for the per-school pages (kept out of schools.json so the
+map's download does not grow):
+  { nces_id: { q: Wikidata QID, f: founding year (P571), u: official website
+    (P856) } }
+  only for matches by NCES id or exact name + state (the fuzzy and geo tiers are
+  skipped, so a weak match never puts a wrong founding year on a school) whose
+  Wikidata item validated as a school.
 
 Usage:
     python build_dataset.py            # NCES master + coordinates + flag + write
@@ -44,6 +51,7 @@ DATA = os.path.join(HERE, "..", "..", "data")
 DEFAULT_MATCHES = os.path.join(DATA, "data_publish", "output", "wiki_nces_matches.csv")
 DEFAULT_MASTER = os.path.join(DATA, "nces_crawl", "output_all_schools", "all_schools_master.csv")
 DEFAULT_COORDS = os.path.join(DATA, "nces_crawl", "output_all_schools", "school_coordinates.csv")
+DEFAULT_ENRICHED = os.path.join(DATA, "wiki_crawl", "output", "schools_enriched.csv")
 OUT = os.path.join(HERE, "..", "web", "public", "data", "schools.json")
 
 PSS_LEVEL = {"1": "elementary", "2": "high"}  # else "other" (combined/unknown)
@@ -68,6 +76,42 @@ def load_matched_ids(path):
             if sid:
                 ids[_pad(sid)] = (r.get("wiki_title") or "").strip()
     return ids
+
+
+# Matcher tiers trusted enough to carry Wikidata facts onto a school's page.
+WIKIDATA_METHODS = {"nces_id", "nces_id_stale", "name_state"}
+
+
+def load_wikidata(matches_path, enriched_path):
+    """NCES school id -> {q, f, u} from the matcher output joined (by QID) to the
+    Wikidata pass in schools_enriched.csv. Empty fields are left out."""
+    csv.field_size_limit(sys.maxsize)
+    with open(enriched_path, encoding="utf-8") as fh:
+        items = {r["wikidata_qid"]: r for r in csv.DictReader(fh)
+                 if r.get("wikidata_qid") and r.get("validation") == "school"}
+    out = {}
+    with open(matches_path, encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            qid = (r.get("wiki_wikidata_qid") or "").strip()
+            if r.get("match_method") not in WIKIDATA_METHODS or qid not in items:
+                continue
+            item = items[qid]
+            rec = {"q": qid}
+            if item.get("founded", "").isdigit():
+                rec["f"] = item["founded"]
+            if item.get("website", "").startswith(("http://", "https://")):
+                rec["u"] = item["website"]
+            out[_pad(r["nces_school_id"].strip())] = rec
+    return out
+
+
+def write_wikidata(out_path, rows, wikidata):
+    """Keep only ids that are on the map, so pages and map stay in step."""
+    keep = {s["i"]: wikidata[_pad(s["i"])] for s in rows if _pad(s["i"]) in wikidata}
+    path = os.path.join(os.path.dirname(out_path), "school_wikidata.json")
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(keep, fh, separators=(",", ":"), ensure_ascii=False)
+    return keep
 
 
 def _enroll(v):
@@ -228,6 +272,7 @@ def main():
     ap.add_argument("--master", default=DEFAULT_MASTER)
     ap.add_argument("--coords", default=DEFAULT_COORDS)
     ap.add_argument("--matches", default=DEFAULT_MATCHES)
+    ap.add_argument("--enriched", default=DEFAULT_ENRICHED)
     ap.add_argument("--out", default=OUT)
     ap.add_argument("--reflag", action="store_true",
                     help="recompute has_wikipedia on the existing schools.json only")
@@ -236,6 +281,7 @@ def main():
     sys.stderr.write(f"Loading matched NCES ids from {args.matches}...\n")
     matched_ids = load_matched_ids(args.matches)
     sys.stderr.write(f"  {len(matched_ids):,} matched ids\n")
+    wikidata = load_wikidata(args.matches, args.enriched)
 
     if args.reflag:
         with open(args.out, encoding="utf-8") as fh:
@@ -243,17 +289,21 @@ def main():
         before = sum(s["w"] for s in rows)
         n_match = flag(rows, matched_ids)
         state_agg, county_agg = write_outputs(args.out, rows)
+        wd = write_wikidata(args.out, rows, wikidata)
         sys.stderr.write(
             f"\nRe-flagged {len(rows):,} schools -> {args.out}\n"
             f"  has_wikipedia : {before:,} (old) -> {n_match:,} (new) "
             f"({100*n_match/max(len(rows),1):.1f}%)\n"
             f"  states={len(state_agg)} counties={len(county_agg)}\n"
+            f"  wikidata      : {len(wd):,} schools ({sum('f' in r for r in wd.values()):,} "
+            f"founding years, {sum('u' in r for r in wd.values()):,} websites)\n"
         )
         return
 
     rows, n_nocoord = rows_from_master(args.master, load_coords(args.coords))
     n_match = flag(rows, matched_ids)
     state_agg, county_agg = write_outputs(args.out, rows)
+    wd = write_wikidata(args.out, rows, wikidata)
     mb = os.path.getsize(args.out) / 1e6
     sys.stderr.write(
         f"\nDone. {len(rows):,} schools -> {args.out} ({mb:.1f} MB)\n"
@@ -262,6 +312,8 @@ def main():
         f"  has_wikipedia : {n_match:,} ({100*n_match/max(len(rows),1):.1f}%)\n"
         f"  states={len(state_agg)}  counties={len(county_agg)}\n"
         f"  dropped (no coordinates): {n_nocoord}\n"
+        f"  wikidata      : {len(wd):,} schools ({sum('f' in r for r in wd.values()):,} "
+        f"founding years, {sum('u' in r for r in wd.values()):,} websites)\n"
     )
 
 

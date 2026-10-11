@@ -30,6 +30,20 @@ export function pageSchools(): School[] {
   return allSchools().filter((s) => states.has(s.s));
 }
 
+// Wikidata facts for well-matched schools (see build_dataset.py): QID, founding
+// year, official website. Wikidata is CC0.
+export type WikidataFacts = { q: string; f?: string; u?: string };
+
+let wikidata: Record<string, WikidataFacts> | null = null;
+
+export function getWikidata(id: string): WikidataFacts | undefined {
+  if (!wikidata) {
+    const file = path.join(process.cwd(), "public/data/school_wikidata.json");
+    wikidata = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, WikidataFacts>;
+  }
+  return wikidata[id];
+}
+
 let byId: Map<string, School> | null = null;
 
 export function getSchool(id: string): School | undefined {
