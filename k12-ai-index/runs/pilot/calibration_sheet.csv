@@ -1,0 +1,222 @@
+model,nces_id,rep,facts,answer,human_halluc(0/1/2),human_sentiment(-1/0/1)
+gpt-5.5,220028802448,0,"School: Collegiate Baton Rouge, Baton Rouge, LA
+Sector: public
+Level: high
+Enrollment: 530
+District: Collegiate Baton Rouge
+Charter: yes","Collegiate Baton Rouge is a public charter high school in Baton Rouge, Louisiana.",,
+gpt-5.5,061296001472,0,"School: Summit Intermediate School, Etiwanda, CA
+Sector: public
+Level: middle
+Enrollment: 1065
+District: Etiwanda Elementary
+Charter: no","Summit Intermediate School is a public middle school in Etiwanda, California, serving grades 6-8 within the Etiwanda School District.",,
+gpt-5.5,A1700327,0,"School: Leport Montessori, Del Mar, CA
+Sector: private
+Level: elementary
+Enrollment: 180
+Religious affiliation: none","LePort Montessori is a private Montessori school in Del Mar, California, offering Montessori-based education for children.",,
+gpt-5.5,A9103106,0,"School: St Stephen's Armenian Elementary School, Watertown, MA
+Sector: private
+Level: elementary
+Enrollment: 128
+Religious affiliation: other_religious","St. Stephen's Armenian Elementary School is an Armenian private elementary school in Watertown, Massachusetts, associated with the Armenian community and Armenian Christian tradition.",,
+gpt-5.5,362652003627,0,"School: Floral Park Memorial High School, Floral Park, NY
+Sector: public
+Level: combined
+Enrollment: 1308
+District: SEWANHAKA CENTRAL HIGH SCHOOL DISTRICT
+Charter: no","Floral Park Memorial High School is a public secondary school in Floral Park, New York, serving grades 7-12 within the Sewanhaka Central High School District. It is one of the district’s several high schools and serves students from the Floral Park area.",,
+gpt-5.5,01013744,0,"School: Fletcher Academy, Fletcher, NC
+Sector: private
+Level: high
+Enrollment: 199
+Religious affiliation: other_religious","Fletcher Academy is a private Christian boarding/day high school in Fletcher, North Carolina, associated with the Seventh-day Adventist tradition. It is part of the Adventist educational system and has a campus near Asheville in western North Carolina.",,
+gpt-5.5,A9503047,0,"School: Oakview Prep School Of Sda, Yonkers, NY
+Sector: private
+Level: combined
+Enrollment: 154
+Religious affiliation: other_religious","Oakview Prep School Of Sda is a Seventh-day Adventist private school in Yonkers, New York.",,
+gpt-5.5,A0502850,0,"School: Looking Glass Center Point School, Eugene, OR
+Sector: private
+Level: high
+Enrollment: 10
+Religious affiliation: none",UNKNOWN,,
+gpt-5.5,A2102685,0,"School: Moore Catholic High School, Staten Island, NY
+Sector: private
+Level: high
+Enrollment: 491
+Religious affiliation: catholic","Moore Catholic High School is a private Roman Catholic high school on Staten Island, New York. It is known as a Catholic college-preparatory school.",,
+gpt-5.5,050040501591,0,"School: Cossatot River High School, Cove, AR
+Sector: public
+Level: combined
+Enrollment: 388
+District: COSSATOT RIVER SCHOOL DISTRICT
+Charter: no",UNKNOWN,,
+gpt-5.5,010192000737,0,"School: Pleasant Grove High School, Pleasant Grove, AL
+Sector: public
+Level: combined
+Enrollment: 752
+District: Jefferson County
+Charter: no","Pleasant Grove High School is a public high school in Pleasant Grove, Alabama, serving the local community as part of Jefferson County Schools.",,
+gpt-5.5,262184005905,0,"School: Buchanan Elementary School, Livonia, MI
+Sector: public
+Level: elementary
+Enrollment: 483
+District: Livonia Public Schools School District
+Charter: no",UNKNOWN,,
+gpt-5.5,380006000702,0,"School: Barnes County North High School, Wimbledon, ND
+Sector: public
+Level: high
+Enrollment: 74
+District: BARNES COUNTY NORTH 7
+Charter: no","Barnes County North High School is a small public school in Wimbledon, North Dakota, serving students from the Barnes County North area.",,
+gpt-5.5,00922692,0,"School: St Raymond Academy For Girls, Bronx, NY
+Sector: private
+Level: high
+Enrollment: 212
+Religious affiliation: catholic","St. Raymond Academy for Girls is a Catholic all-girls high school in the Bronx, associated with the St. Raymond parish/school community.",,
+gpt-5.5,A2103067,0,"School: Trinity Academy, Portland, OR
+Sector: private
+Level: combined
+Enrollment: 126
+Religious affiliation: other_religious","Trinity Academy is a private classical Christian school in Portland, Oregon, known for a rigorous liberal arts curriculum with emphasis on classical languages, humanities, and Christian formation.",,
+gpt-5.5,320048000234,0,"School: Natchez Elementary School, Wadsworth, NV
+Sector: public
+Level: elementary
+Enrollment: 121
+District: Washoe County
+Charter: no",UNKNOWN,,
+gpt-5.5,00538911,0,"School: Our Lady-Prompt Succor School, Alexandria, LA
+Sector: private
+Level: elementary
+Enrollment: 383
+Religious affiliation: catholic","Our Lady-Prompt Succor School is a Catholic school in Alexandria, Louisiana.",,
+gpt-5.5,550582002857,0,"School: John Dewey Academy of Learning, Green Bay, WI
+Sector: public
+Level: combined
+Enrollment: 134
+District: Green Bay Area Public School District
+Charter: yes","John Dewey Academy of Learning is a public charter school in Green Bay, Wisconsin, associated with the Green Bay Area Public School District. It is known for project-based learning and a personalized/alternative education model.",,
+gpt-5.5,01604475,0,"School: Our Lady Of Good Counsel High School, Olney, MD
+Sector: private
+Level: high
+Enrollment: 1246
+Religious affiliation: catholic","Our Lady of Good Counsel High School is a private Catholic college-preparatory high school in Olney, Maryland. It is associated with the Xaverian Brothers tradition and is known for academics, athletics, and a range of extracurricular and service programs.",,
+gpt-5.5,01432608,0,"School: Hampton Roads Academy, Newport News, VA
+Sector: private
+Level: combined
+Enrollment: 614
+Religious affiliation: none","Hampton Roads Academy is an independent college-preparatory day school in Newport News, Virginia. It is known as a private, nonsectarian school serving students across multiple grade levels.",,
+gpt-5.5,370060000248,0,"School: Grandy Primary School, Camden, NC
+Sector: public
+Level: elementary
+Enrollment: 415
+District: Camden County Schools
+Charter: no",UNKNOWN,,
+gpt-5.5,00001015,0,"School: Escambia Academy, Atmore, AL
+Sector: private
+Level: combined
+Enrollment: 170
+Religious affiliation: none","Escambia Academy is a private school in Atmore, Alabama, known as the Cougars. It is associated with the Alabama Independent School Association and offers athletics and other school activities.",,
+gpt-5.5,01257929,0,"School: Moses Brown School, Providence, RI
+Sector: private
+Level: combined
+Enrollment: 774
+Religious affiliation: other_religious","Moses Brown School is an independent Quaker school in Providence, Rhode Island. It is known as an academically strong college-preparatory school with a long history and a Friends/Quaker educational tradition.",,
+gpt-5.5,A2102405,0,"School: Mesivta Torah Temimah Of Lakewood, Lakewood, NJ
+Sector: private
+Level: high
+Enrollment: 132
+Religious affiliation: other_religious","Mesivta Torah Temimah of Lakewood is a private Orthodox Jewish boys’ yeshiva high school in Lakewood, New Jersey.",,
+gpt-5.5,00232905,0,"School: Westover School, Middlebury, CT
+Sector: private
+Level: high
+Enrollment: 142
+Religious affiliation: none","Westover School is a private college-preparatory boarding and day school for girls in Middlebury, Connecticut. It is known for academics, arts, athletics, and a traditional independent-school campus setting.",,
+gpt-5.5,BB240244,0,"School: Mesivta Toras Moshe, Lawrence, NY
+Sector: private
+Level: high
+Enrollment: 49
+Religious affiliation: other_religious","Mesivta Toras Moshe in Lawrence, NY is a Jewish Orthodox/Yeshiva high school for boys.",,
+gpt-5.5,368097706777,0,"School: Nurses Middle College Charter High School-Capital Region, Rensselaer, NY
+Sector: public
+Level: high
+Enrollment: 83
+District: NURSES MIDDLE COLLEGE CHARTER HIGH SCHOOL-CAPITAL REGION
+Charter: yes","Nurses Middle College Charter High School-Capital Region is a public charter high school in Rensselaer, NY, focused on preparing students for healthcare and nursing-related pathways.",,
+gpt-5.5,063386005296,0,"School: El Toro High School, Lake Forest, CA
+Sector: public
+Level: high
+Enrollment: 1902
+District: Saddleback Valley Unified
+Charter: no","El Toro High School is a public comprehensive high school in Lake Forest, California. It is known as one of the high schools in the Saddleback Valley Unified School District and has longstanding athletics and extracurricular programs.",,
+gpt-5.5,A0701317,0,"School: Academy Of The Sacred Heart, Bloomfield Hills, MI
+Sector: private
+Level: combined
+Enrollment: 468
+Religious affiliation: catholic","Academy of the Sacred Heart in Bloomfield Hills, Michigan is a private Catholic school affiliated with the Sacred Heart network. It is known as an independent Catholic school with roots in the Society of the Sacred Heart and offers education across multiple grade levels, including an all-girls upper school.",,
+gpt-5.5,AA001586,0,"School: Saline County Christian Academy, Benton, AR
+Sector: private
+Level: combined
+Enrollment: 25
+Religious affiliation: other_religious","Saline County Christian Academy is a private Christian school in Benton, Arkansas.",,
+gpt-5.5,530420000653,0,"School: Lake Stevens Senior High School, Lake Stevens, WA
+Sector: public
+Level: high
+Enrollment: 2205
+District: Lake Stevens School District
+Charter: no","Lake Stevens Senior High School is a public high school in Lake Stevens, Washington, serving students in the Lake Stevens School District.",,
+gpt-5.5,480001009624,0,"School: Lehman High School, Kyle, TX
+Sector: public
+Level: high
+Enrollment: 2128
+District: HAYS CISD
+Charter: no","Lehman High School is a public high school in Kyle, Texas, serving students in Hays CISD. It is named after longtime local educator and school board member Ted Lehman.",,
+gpt-5.5,062274013964,0,"School: Creekside Junior High School, Los Banos, CA
+Sector: public
+Level: middle
+Enrollment: 812
+District: Los Banos Unified
+Charter: no",UNKNOWN,,
+gpt-5.5,490063000660,0,"School: Art City School, Springville, UT
+Sector: public
+Level: elementary
+Enrollment: 433
+District: Nebo District
+Charter: no","Art City School is an elementary school in Springville, Utah, named in connection with Springville’s “Art City” identity.",,
+gpt-5.5,180009302475,0,"School: Excel Center - Michigan Street, Indianapolis, IN
+Sector: public
+Level: high
+Enrollment: 385
+District: Excel Center - Michigan Street
+Charter: yes","Excel Center - Michigan Street is an adult high school in Indianapolis associated with Goodwill’s Excel Center model, designed to help adults earn a high school diploma and access supportive services such as career pathways and college/career planning.",,
+gpt-5.5,292689001636,0,"School: Rolla Senior High School, Rolla, MO
+Sector: public
+Level: high
+Enrollment: 1398
+District: ROLLA 31
+Charter: no","Rolla Senior High School is the public high school serving Rolla, Missouri, and is part of Rolla Public Schools.",,
+gpt-5.5,190897001596,0,"School: Carver Elementary School, Des Moines, IA
+Sector: public
+Level: elementary
+Enrollment: 436
+District: Des Moines Independent Comm School District
+Charter: no",UNKNOWN,,
+gpt-5.5,020018000057,0,"School: Bartlett High School, Anchorage, AK
+Sector: public
+Level: combined
+Enrollment: 1431
+District: Anchorage School District
+Charter: no","Bartlett High School is a public high school in Anchorage, Alaska, associated with the Anchorage School District. It serves grades 9-12 and is known as the Golden Bears.",,
+gpt-5.5,120039002715,0,"School: School For Advanced Studies North, Miami, FL
+Sector: public
+Level: high
+Enrollment: 113
+District: MIAMI-DADE
+Charter: no","School for Advanced Studies North is part of the School for Advanced Studies program in Miami-Dade County, a public dual-enrollment high school operated with Miami Dade College. Students typically complete high school requirements while taking college courses and can graduate with both a high school diploma and an associate degree.",,
+gpt-5.5,A0501570,0,"School: Lt Joseph P Kennedy Jr School, Tinley Park, IL
+Sector: private
+Level: combined
+Enrollment: 39
+Religious affiliation: none",UNKNOWN,,

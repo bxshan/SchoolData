@@ -1,0 +1,8 @@
+pandas
+pyarrow
+requests
+pyyaml
+scipy
+statsmodels
+matplotlib
+tqdm

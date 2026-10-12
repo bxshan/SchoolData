@@ -1,0 +1,8 @@
+# large / regenerable inputs and intermediates
+data/hf/
+data/frame.parquet
+runs/sample_*.parquet
+runs/mock/
+# raw model responses are research data: keep them even though the repo ignores *.jsonl globally
+!runs/*/responses.jsonl
+!runs/*/judgments.jsonl

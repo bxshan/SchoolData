@@ -1,0 +1,66 @@
+# K12-AII experiment config. Everything tunable lives here.
+
+paths:
+  hf_parquet_glob: data/hf/*.parquet            # SchoolData/us-k12-schools (HF)
+  nces_master: ../data/nces_crawl/output_all_schools/all_schools_master.csv
+  wiki_matches: ../data/data_publish/output/wiki_nces_matches.csv
+  frame: data/frame.parquet
+  wiki_enriched: ../data/wiki_crawl/output/schools_enriched.csv   # pageviews_60d, founded, website (wiki schools only)
+  wiki_articles: ../data/wiki_crawl/output/wiki_articles.jsonl
+
+frame:
+  public_statuses: [Open, Reopened]  # New/Added (opened 2024-25) fall after most knowledge cutoffs
+  require_high_school: true         # only schools whose top grade is 12 (high schools and 6-12 / 7-12 / K-12)
+  exclude_territories: true         # PR/GU/VI/AS/MP: different language and context
+  public_types: [Regular]          # drop special-ed / vocational / alternative public schools
+  wiki_match_methods: [nces_id, name_state]   # drop weak fuzzy/geo matches from the wiki group
+  require_frl_for_public: true     # needed for the SES (bias) sub-question
+
+sampling:
+  seed: 20261004
+  match_enrollment: true           # pair each wiki school with the nearest-size non-wiki school in the same cell
+  caliper_log: 0.35                # max |log(enrollment ratio)| within a pair (0.35 ~ within 40%)
+  n_per_group: 50                  # pilot: 50 wiki + 50 non-wiki (matched on sector x locale x level)
+
+prompt:
+  include_city: true               # city disambiguates same-named schools; NOT scored then
+
+judge:                             # keep OUTSIDE the tested families (self-preference bias)
+  provider: anthropic
+  model: claude-opus-5-5
+  temperature: null                # newer Claude models reject the temperature parameter
+  max_tokens: 800
+
+repeats: 1                         # repeated calls per (model, school, task); GPT-5.5 / new Claude reject temperature, so outputs vary
+exposure:
+  high_school_only: true           # keep only schools whose top grade is 12 (set false for all levels)
+  # the exposed/unexposed split uses the tested model's own `cutoff` in the models list below
+
+concurrency: 4
+max_tokens_default: 700
+
+# cutoff for the GPT models = 'knowledge cutoff' on developers.openai.com/api/docs/models/<model> (checked 2026-10-04); other vendors still UNVERIFIED.
+# release/cutoff dates feed sub-question 6 (version trend). ALL IDs/dates below must be
+# verified against each vendor's docs before the real run (see research design §8).
+models:
+  - {key: gpt-4o,       family: gpt,    provider: openai,    model: gpt-4o-2024-08-06,          release: 2024-05, cutoff: 2023-10-01, temperature: 0, tokens_param: max_tokens}
+  - {key: gpt-5,        family: gpt,    provider: openai,    model: gpt-5-2025-08-07,                    release: 2025-08, cutoff: 2024-09-30, temperature: null, tokens_param: max_completion_tokens, max_tokens: 4000, extra: {reasoning_effort: minimal}}
+  - {key: gpt-5.5,      family: gpt,    provider: openai,    model: gpt-5.5-2026-04-23,       release: 2026-04, cutoff: 2025-12-01,    temperature: null, tokens_param: max_completion_tokens, max_tokens: 4000, extra: {reasoning_effort: none}}
+  - {key: claude-3.5-sonnet, family: claude, provider: anthropic, model: claude-3-5-sonnet-20240620, release: 2024-06, cutoff: 2024-04, temperature: 0}
+  - {key: claude-sonnet-4.5, family: claude, provider: anthropic, model: claude-sonnet-4-5,        release: 2025-09, cutoff: 2025-01, temperature: 0}
+  - {key: claude-sonnet-5.5, family: claude, provider: anthropic, model: claude-sonnet-5-5,        release: 2026-01, cutoff: null,    temperature: 0}
+  - {key: gemini-1.5-pro, family: gemini, provider: google, model: gemini-1.5-pro,  release: 2024-05, cutoff: 2023-11, temperature: 0}
+  - {key: gemini-2.5-pro, family: gemini, provider: google, model: gemini-2.5-pro,  release: 2025-06, cutoff: 2025-01, temperature: 0, max_tokens: 4000}
+  # TODO: add the newest Gemini Pro-tier model after checking Google AI Studio.
+  - key: llama-3.1-70b
+    family: llama
+    provider: openai_compat          # OpenRouter / Together / Groq ... any OpenAI-compatible host
+    base_url: https://openrouter.ai/api/v1
+    key_env: OPENROUTER_API_KEY
+    model: meta-llama/llama-3.1-70b-instruct
+    release: 2024-07
+    cutoff: 2023-12
+    temperature: 0
+    tokens_param: max_tokens
+  - {key: mock-old, family: mock, provider: mock, model: mock, release: 2023-01, cutoff: 2022-01, mock_skill: 0.35}
+  - {key: mock-new, family: mock, provider: mock, model: mock, release: 2025-01, cutoff: 2024-01, mock_skill: 0.6}

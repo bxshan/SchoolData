@@ -1,0 +1,255 @@
+# K12-AII analysis report
+
+Judge: anthropic/claude-opus-5-5
+
+Schools: 400, models: 3, responses: 1200, item-level rows: 3468
+
+
+## SQ1. Factual accuracy: wiki vs no-wiki (easy items A1-A4 pooled over applicable items)
+
+| model | acc_w0 | wrong_w0 | abst_w0 | acc_w1 | wrong_w1 | abst_w1 | acc_gap(wiki-no) | wrong_gap(no-wiki) |
+|---|---|---|---|---|---|---|---|---|
+| gpt-4o | 0.462 | 0.007 | 0.531 | 0.614 | 0.010 | 0.376 | 0.152 | -0.003 |
+| gpt-5 | 0.860 | 0.030 | 0.110 | 0.924 | 0.012 | 0.064 | 0.064 | 0.018 |
+| gpt-5.5 | 0.924 | 0.028 | 0.048 | 0.975 | 0.010 | 0.015 | 0.051 | 0.018 |
+
+
+Pooled logit, school-clustered SEs, controls = sector, locale, level, log enrollment, item, model FE:
+
+    from_wikipedia: coef=0.928, 95% CI [0.570, 1.286], p=0.0000  (odds ratio 2.53)
+
+
+### Is it knowledge, or just guessing from the school name?
+
+`name_only_acc` = accuracy of a keyword rule that sees only the school name/city (no model). `above_name` = model accuracy minus that baseline: the share attributable to knowing the school.
+
+| item | model_acc_w0 | model_acc_w1 | name_only_acc_w0 | name_only_acc_w1 | above_name_w0 | above_name_w1 |
+|---|---|---|---|---|---|---|
+| district | 0.661 | 0.689 | 0.619 | 0.573 | 0.042 | 0.116 |
+| level | 0.720 | 0.852 | 0.550 | 0.620 | 0.170 | 0.232 |
+| religion | 0.830 | 0.915 | 0.716 | 0.686 | 0.114 | 0.229 |
+| sector | 0.763 | 0.850 | 0.810 | 0.725 | -0.047 | 0.125 |
+
+
+Pooled logit, additionally controlling for whether the name alone gives the answer away (`base_ok`):
+
+    from_wikipedia: coef=0.935, 95% CI [0.575, 1.296], p=0.0000
+
+
+
+    School-bootstrap (4000 draws) wiki - no-wiki gap in accuracy: +0.094, 95% CI [+0.048, +0.141]
+    ... in accuracy ABOVE the name-only baseline (knowledge beyond the name): +0.109, 95% CI [+0.032, +0.184]
+    PAIRED (enrollment-matched pairs, n=200) wiki - no-wiki accuracy: +0.094, 95% CI [+0.057, +0.133]
+    PAIRED, accuracy ABOVE the name-only baseline: +0.109, 95% CI [+0.043, +0.174]
+
+
+By item:
+
+| item | acc_w0 | wrong_w0 | abst_w0 | acc_w1 | wrong_w1 | abst_w1 | acc_gap(wiki-no) | wrong_gap(no-wiki) |
+|---|---|---|---|---|---|---|---|---|
+| district | 0.661 | 0.000 | 0.339 | 0.689 | 0.007 | 0.303 | 0.028 | -0.007 |
+| level | 0.720 | 0.045 | 0.235 | 0.852 | 0.005 | 0.143 | 0.132 | 0.040 |
+| religion | 0.830 | 0.023 | 0.147 | 0.915 | 0.046 | 0.039 | 0.085 | -0.023 |
+| sector | 0.763 | 0.005 | 0.232 | 0.850 | 0.000 | 0.150 | 0.087 | 0.005 |
+
+
+
+## SQ1-hard. School-specific facts (A5 exact grade span, A6 enrollment band, A7 charter)
+
+Rows: 2988. Unparsed answers: 0. Note: UNKNOWN counts as not-correct, so items that models mostly decline (check abst_*) understate knowledge.
+
+| model | acc_w0 | wrong_w0 | abst_w0 | acc_w1 | wrong_w1 | abst_w1 | acc_gap(wiki-no) | wrong_gap(no-wiki) |
+|---|---|---|---|---|---|---|---|---|
+| gpt-4o | 0.205 | 0.038 | 0.757 | 0.353 | 0.046 | 0.600 | 0.149 | -0.008 |
+| gpt-5 | 0.582 | 0.139 | 0.279 | 0.727 | 0.145 | 0.129 | 0.145 | -0.006 |
+| gpt-5.5 | 0.590 | 0.090 | 0.319 | 0.747 | 0.131 | 0.122 | 0.157 | -0.040 |
+
+
+| item | acc_w0 | wrong_w0 | abst_w0 | acc_w1 | wrong_w1 | abst_w1 | acc_gap(wiki-no) | wrong_gap(no-wiki) |
+|---|---|---|---|---|---|---|---|---|
+| charter | 0.609 | 0.037 | 0.354 | 0.707 | 0.000 | 0.293 | 0.099 | 0.037 |
+| enroll | 0.365 | 0.142 | 0.493 | 0.540 | 0.173 | 0.287 | 0.175 | -0.032 |
+| grades | 0.480 | 0.062 | 0.458 | 0.630 | 0.093 | 0.277 | 0.150 | -0.032 |
+
+
+
+### Is it knowledge, or just guessing from the school name?
+
+`name_only_acc` = accuracy of a keyword rule that sees only the school name/city (no model). `above_name` = model accuracy minus that baseline: the share attributable to knowing the school.
+
+| item | model_acc_w0 | model_acc_w1 | name_only_acc_w0 | name_only_acc_w1 | above_name_w0 | above_name_w1 |
+|---|---|---|---|---|---|---|
+| charter | 0.609 | 0.707 | 0.867 | 0.939 | -0.259 | -0.231 |
+| enroll | 0.365 | 0.540 | 0.360 | 0.380 | 0.005 | 0.160 |
+| grades | 0.480 | 0.630 | 0.490 | 0.485 | -0.010 | 0.145 |
+
+
+Pooled logit, additionally controlling for whether the name alone gives the answer away (`base_ok`):
+
+    from_wikipedia: coef=0.834, 95% CI [0.572, 1.095], p=0.0000
+
+
+
+    School-bootstrap (4000 draws) wiki - no-wiki gap in accuracy: +0.163, 95% CI [+0.104, +0.220]
+    ... in accuracy ABOVE the name-only baseline (knowledge beyond the name): +0.146, 95% CI [+0.064, +0.225]
+    PAIRED (enrollment-matched pairs, n=200) wiki - no-wiki accuracy: +0.163, 95% CI [+0.110, +0.216]
+    PAIRED, accuracy ABOVE the name-only baseline: +0.146, 95% CI [+0.077, +0.220]
+
+Hard items, pooled logit, school-clustered:
+
+    from_wikipedia: coef=0.835, 95% CI [0.574, 1.096], p=0.0000
+
+Wrong-answer (confident error) logit:
+
+    from_wikipedia: coef=0.230, 95% CI [-0.096, 0.555], p=0.1664
+
+
+## SQ1-forced. Forced answers (no UNKNOWN allowed): latent knowledge
+
+Rows: 6456. Abstentions that slipped through: 0; unparsed: 0. With guessing forced, accuracy is directly comparable to the name-only baseline.
+
+
+### HARD (A5-A7), forced
+
+| model | acc_w0 | wrong_w0 | abst_w0 | acc_w1 | wrong_w1 | abst_w1 | acc_gap(wiki-no) | wrong_gap(no-wiki) |
+|---|---|---|---|---|---|---|---|---|
+| gpt-4o | 0.777 | 0.223 | 0.000 | 0.841 | 0.159 | 0.000 | 0.064 | 0.064 |
+| gpt-5 | 0.751 | 0.249 | 0.000 | 0.835 | 0.165 | 0.000 | 0.084 | 0.084 |
+| gpt-5.5 | 0.803 | 0.197 | 0.000 | 0.829 | 0.171 | 0.000 | 0.026 | 0.026 |
+
+
+
+### Is it knowledge, or just guessing from the school name?
+
+`name_only_acc` = accuracy of a keyword rule that sees only the school name/city (no model). `above_name` = model accuracy minus that baseline: the share attributable to knowing the school.
+
+| item | model_acc_w0 | model_acc_w1 | name_only_acc_w0 | name_only_acc_w1 | above_name_w0 | above_name_w1 |
+|---|---|---|---|---|---|---|
+| charter | 0.939 | 0.997 | 0.867 | 0.939 | 0.071 | 0.058 |
+| enroll | 0.660 | 0.743 | 0.360 | 0.380 | 0.300 | 0.363 |
+| grades | 0.815 | 0.848 | 0.490 | 0.485 | 0.325 | 0.363 |
+
+
+Pooled logit, additionally controlling for whether the name alone gives the answer away (`base_ok`):
+
+    from_wikipedia: coef=0.428, 95% CI [0.166, 0.690], p=0.0014
+
+
+
+    School-bootstrap (4000 draws) wiki - no-wiki gap in accuracy: +0.061, 95% CI [+0.023, +0.101]
+    ... in accuracy ABOVE the name-only baseline (knowledge beyond the name): +0.045, 95% CI [-0.018, +0.105]
+    PAIRED (enrollment-matched pairs, n=200) wiki - no-wiki accuracy: +0.061, 95% CI [+0.023, +0.101]
+    PAIRED, accuracy ABOVE the name-only baseline: +0.045, 95% CI [-0.009, +0.099]
+
+
+### EASY (A1-A4), forced
+
+| model | acc_w0 | wrong_w0 | abst_w0 | acc_w1 | wrong_w1 | abst_w1 | acc_gap(wiki-no) | wrong_gap(no-wiki) |
+|---|---|---|---|---|---|---|---|---|
+| gpt-4o | 0.958 | 0.042 | 0.000 | 0.983 | 0.017 | 0.000 | 0.026 | 0.026 |
+| gpt-5 | 0.959 | 0.041 | 0.000 | 0.985 | 0.015 | 0.000 | 0.025 | 0.025 |
+| gpt-5.5 | 0.959 | 0.041 | 0.000 | 0.992 | 0.008 | 0.000 | 0.032 | 0.032 |
+
+
+
+### Is it knowledge, or just guessing from the school name?
+
+`name_only_acc` = accuracy of a keyword rule that sees only the school name/city (no model). `above_name` = model accuracy minus that baseline: the share attributable to knowing the school.
+
+| item | model_acc_w0 | model_acc_w1 | name_only_acc_w0 | name_only_acc_w1 | above_name_w0 | above_name_w1 |
+|---|---|---|---|---|---|---|
+| district | 0.989 | 0.981 | 0.619 | 0.573 | 0.370 | 0.408 |
+| level | 0.925 | 0.998 | 0.550 | 0.620 | 0.375 | 0.378 |
+| religion | 0.944 | 0.941 | 0.716 | 0.686 | 0.229 | 0.255 |
+| sector | 0.990 | 1.000 | 0.810 | 0.725 | 0.180 | 0.275 |
+
+
+Pooled logit, additionally controlling for whether the name alone gives the answer away (`base_ok`):
+
+    from_wikipedia: coef=1.286, 95% CI [0.539, 2.033], p=0.0007
+
+
+
+    School-bootstrap (4000 draws) wiki - no-wiki gap in accuracy: +0.027, 95% CI [+0.012, +0.044]
+    ... in accuracy ABOVE the name-only baseline (knowledge beyond the name): +0.042, 95% CI [-0.021, +0.101]
+    PAIRED (enrollment-matched pairs, n=200) wiki - no-wiki accuracy: +0.028, 95% CI [+0.013, +0.042]
+    PAIRED, accuracy ABOVE the name-only baseline: +0.043, 95% CI [-0.012, +0.097]
+
+
+### Hard items: free-form vs forced, by model and wiki status
+
+`dares_gap` = how much accuracy rises when the model is forced to answer = knowledge the model had but would not commit to.
+
+| model | from_wikipedia | free_acc | free_abstain | forced_acc | dares_gap(forced-free) |
+|---|---|---|---|---|---|
+| gpt-4o | 0 | 0.205 | 0.757 | 0.777 | 0.572 |
+| gpt-4o | 1 | 0.353 | 0.600 | 0.841 | 0.488 |
+| gpt-5 | 0 | 0.582 | 0.279 | 0.751 | 0.169 |
+| gpt-5 | 1 | 0.727 | 0.129 | 0.835 | 0.108 |
+| gpt-5.5 | 0 | 0.590 | 0.319 | 0.803 | 0.213 |
+| gpt-5.5 | 1 | 0.747 | 0.122 | 0.829 | 0.082 |
+
+
+
+## SQ2. Wrong-vs-abstain behaviour
+
+`wrong_*` = confident wrong answer rate (objective hallucination), `abst_*` = said UNKNOWN. Compare: a model that does not know should abstain, not err.
+
+| model | wrong_w0 | abst_w0 | wrong_w1 | abst_w1 | wrong_gap(no-wiki) |
+|---|---|---|---|---|---|
+| gpt-4o | 0.007 | 0.531 | 0.010 | 0.376 | -0.003 |
+| gpt-5 | 0.030 | 0.110 | 0.012 | 0.064 | 0.018 |
+| gpt-5.5 | 0.028 | 0.048 | 0.010 | 0.015 | 0.018 |
+
+
+Wrong-answer logit:
+
+    from_wikipedia: coef=-0.707, 95% CI [-1.477, 0.063], p=0.0718
+
+
+## Sample balance (wiki vs no-wiki)
+
+| variable | wiki_mean | no_wiki_mean | SMD |
+|---|---|---|---|
+| log enrollment | 6.275 | 6.276 | -0.001 |
+| log name frequency in state | 0.029 | 0.045 | -0.088 |
+| free/reduced lunch share (public) | 0.596 | 0.568 | 0.110 |
+
+
+Design: 200 enrollment-matched pairs (max |log ratio| = 0.30).
+
+
+## SQ3. Do models agree on the gap?
+
+Per-model gaps are in the SQ1 table. Interaction test (wiki x model):
+
+    LR chi2=1.65, df=2, p=0.4383  (item-level; ignores clustering, indicative only)
+
+
+## SQ4. Urban/suburban/rural beyond wiki status
+
+| locale3 | 0 | 1 |
+|---|---|---|
+| rural | 0.690 | 0.763 |
+| suburban | 0.766 | 0.867 |
+| urban | 0.795 | 0.887 |
+
+
+Logit with wiki x locale interaction (reference = urban):
+
+    C(locale3, Treatment('urban'))[T.rural]: coef=-0.301, 95% CI [-0.942, 0.340], p=0.3570
+    C(locale3, Treatment('urban'))[T.suburban]: coef=-0.341, 95% CI [-1.089, 0.408], p=0.3724
+    from_wikipedia:C(locale3, Treatment('urban'))[T.rural]: coef=-0.497, 95% CI [-1.431, 0.436], p=0.2966
+    from_wikipedia:C(locale3, Treatment('urban'))[T.suburban]: coef=-0.008, 95% CI [-1.085, 1.069], p=0.9888
+
+
+## SQ6. Gap across model versions (same family)
+
+| model | family | release | cutoff | acc_w0 | acc_w1 | acc_gap(wiki-no) | wrong_w0 |
+|---|---|---|---|---|---|---|---|
+| gpt-4o | gpt | 2024-05 | 2023-10-01 | 0.462 | 0.614 | 0.152 | 0.007 |
+| gpt-5 | gpt | 2025-08 | 2024-09-30 | 0.860 | 0.924 | 0.064 | 0.030 |
+| gpt-5.5 | gpt | 2026-04 | 2025-12-01 | 0.924 | 0.975 | 0.051 | 0.028 |
+
+
+Caveat: schools founded after a model's knowledge cutoff cannot be known; check `cutoff` vs school open dates before reading a shrinking gap as progress.

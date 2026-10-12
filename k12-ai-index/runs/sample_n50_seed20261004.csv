@@ -1,0 +1,101 @@
+sample_id,nces_id,school_name,city,state,sector,from_wikipedia,locale3,level,enrollment,frl_pct
+0,00001015,Escambia Academy,Atmore,AL,private,1,rural,combined,170.0,
+1,00030942,Salpointe Catholic High School,Tucson,AZ,private,1,urban,high,1305.0,
+2,00070147,St Paul High School,Santa Fe Springs,CA,private,1,suburban,high,398.0,
+3,00232086,Sacred Heart Greenwich,Greenwich,CT,private,1,rural,combined,609.0,
+4,00257599,Cardinal Gibbons High School,Fort Lauderdale,FL,private,1,urban,high,1031.0,
+5,00257952,Father Lopez Catholic High School,Daytona Beach,FL,private,1,rural,high,447.0,
+6,00345748,Althoff Catholic High School,Belleville,IL,private,1,suburban,high,335.0,
+7,00346785,St Francis High School,Wheaton,IL,private,1,suburban,high,703.0,
+8,00564329,Maine Central Institute,Pittsfield,ME,private,1,rural,high,306.0,
+9,00604272,The Winchendon School,Winchendon,MA,private,1,rural,high,271.0,
+10,00704084,Immanuel Lutheran School,Hutchinson,MN,private,0,rural,elementary,74.0,
+11,00736141,Lee Academy,Clarksdale,MS,private,1,rural,high,174.0,
+12,010192000737,Pleasant Grove High School,Pleasant Grove,AL,public,1,suburban,combined,752.0,0.6343085106382979
+13,01161373,Columbia Christian Schools,Portland,OR,private,1,urban,combined,333.0,
+14,01197796,Mercersburg Academy,Mercersburg,PA,private,1,rural,high,439.0,
+15,01328528,Vanguard College Preparatory School,Waco,TX,private,1,urban,combined,292.0,
+16,01906716,Clearfield Alliance Christian School,Clearfield,PA,private,1,rural,combined,101.0,
+17,020018000057,Bartlett High School,Anchorage,AK,public,1,urban,combined,1431.0,0.6345213137665968
+18,02036851,Faith Baptist School,Davison,MI,private,1,suburban,combined,267.0,
+19,02060636,Liberty Christian School,Argyle,TX,private,1,rural,combined,1282.0,
+20,050040501591,Cossatot River High School,Cove,AR,public,1,rural,combined,388.0,0.9922680412371134
+21,060197312410,Da Vinci Design,El Segundo,CA,public,0,suburban,high,536.0,0.5279850746268657
+22,060253014479,Griffin Academy High School,Vallejo,CA,public,0,urban,high,186.0,0.7150537634408602
+23,061111001230,Abraham Lincoln Elementary School,Palm Desert,CA,public,0,urban,elementary,607.0,0.8665568369028006
+24,061296001472,Summit Intermediate School,Etiwanda,CA,public,1,suburban,middle,1065.0,0.26009389671361505
+25,062274013964,Creekside Junior High School,Los Banos,CA,public,0,rural,middle,812.0,0.8460591133004927
+26,062720004100,Orestimba High School,Newman,CA,public,0,rural,high,925.0,0.6086486486486486
+27,063386005296,El Toro High School,Lake Forest,CA,public,1,suburban,high,1902.0,0.5021030494216614
+28,090102001691,Westside Middle School Academy,Danbury,CT,public,1,urban,middle,736.0,0.5421195652173914
+29,120039001478,William H. Turner Technical Arts High School,Miami,FL,public,1,suburban,high,1290.0,0.5806201550387597
+30,120039002715,School For Advanced Studies North,Miami,FL,public,0,suburban,high,113.0,0.2743362831858407
+31,120144002780,Windy Ridge K-8,Orlando,FL,public,0,suburban,combined,1136.0,0.23591549295774647
+32,180009302475,Excel Center - Michigan Street,Indianapolis,IN,public,0,urban,high,385.0,0.43896103896103894
+33,180105000180,Brownstown Central High School,Brownstown,IN,public,0,rural,high,463.0,0.35205183585313177
+34,190897001596,Carver Elementary School,Des Moines,IA,public,0,urban,elementary,436.0,0.9243119266055045
+35,220018600981,Sophie B. Wright Institute of Academic Excellence,New Orleans,LA,public,1,urban,combined,534.0,0.8632958801498127
+36,220028802448,Collegiate Baton Rouge,Baton Rouge,LA,public,0,urban,high,530.0,0.9679245283018868
+37,231110000405,Fort Kent Community High School,Fort Kent,ME,public,0,rural,high,240.0,0.48333333333333334
+38,262184005905,Buchanan Elementary School,Livonia,MI,public,0,urban,elementary,483.0,0.20496894409937888
+39,262540006202,Westwood High School,Ishpeming,MI,public,1,rural,combined,383.0,0.2558746736292428
+40,270576000215,Blooming Prairie High School,Blooming Prairie,MN,public,1,rural,combined,385.0,0.3168831168831169
+41,292689001636,Rolla Senior High School,Rolla,MO,public,1,rural,high,1398.0,0.4234620886981402
+42,317686001615,South Sioux City Middle School,So Sioux City,NE,public,0,suburban,middle,781.0,0.6991037131882202
+43,320000100882,Democracy Prep at Agassi High School,Las Vegas,NV,public,0,urban,high,314.0,1.0
+44,320048000234,Natchez Elementary School,Wadsworth,NV,public,0,rural,elementary,121.0,1.0
+45,341314003041,Plainfield Academy For The Arts & Advanced Studies,Plainfield,NJ,public,1,suburban,combined,357.0,0.773109243697479
+46,360010002723,Ps 220 Edward Mandel,Forest Hills,NY,public,0,urban,elementary,616.0,0.8116883116883117
+47,362652003627,Floral Park Memorial High School,Floral Park,NY,public,1,suburban,combined,1308.0,0.2308868501529052
+48,368097706777,Nurses Middle College Charter High School-Capital Region,Rensselaer,NY,public,0,suburban,high,83.0,0.8433734939759037
+49,370060000248,Grandy Primary School,Camden,NC,public,0,rural,elementary,415.0,0.30120481927710846
+50,380006000702,Barnes County North High School,Wimbledon,ND,public,0,rural,high,74.0,0.28378378378378377
+51,390459702393,Waynesfield-Goshen Local High School,Waynesfield,OH,public,1,rural,combined,220.0,0.75
+52,480001009624,Lehman High School,Kyle,TX,public,1,rural,high,2128.0,0.5615601503759399
+53,480771013733,Blanson Cte High School,Houston,TX,public,0,suburban,high,1258.0,0.8044515103338633
+54,481134000612,Bridgeport High School,Bridgeport,TX,public,1,rural,high,674.0,0.5341246290801187
+55,481623006532,Dr Wright L Lassiter Jr Early College High School,Dallas,TX,public,1,urban,high,293.0,0.8668941979522184
+56,490003000002,American Fork High School,American Fork,UT,public,1,suburban,high,2316.0,0.14032815198618306
+57,490063000660,Art City School,Springville,UT,public,0,suburban,combined,433.0,0.3302540415704388
+58,490063001500,Meadow Brook School,Springville,UT,public,0,suburban,combined,679.0,0.30486008836524303
+59,490105000562,Northlake School,Tooele,UT,public,0,rural,combined,684.0,0.4502923976608187
+60,510381001661,Richlands High School,Richlands,VA,public,1,rural,high,557.0,0.8850987432675045
+61,530039000072,Interlake Senior High School,Bellevue,WA,public,1,urban,high,1611.0,0.26567349472377405
+62,530141000261,Lakes High School,Lakewood,WA,public,1,urban,high,1158.0,0.5630397236614854
+63,530420000653,Lake Stevens Senior High School,Lake Stevens,WA,public,1,suburban,high,2205.0,0.3165532879818594
+64,550582002857,John Dewey Academy of Learning,Green Bay,WI,public,1,urban,combined,134.0,0.5298507462686567
+65,560198000448,South High School,Cheyenne,WY,public,1,urban,high,1112.0,0.7158273381294964
+66,A0301285,Wesleyan School,Peachtree Corners,GA,private,1,suburban,combined,1200.0,
+67,A0301746,Lighthouse Christian Academy,Stevensville,MD,private,0,rural,elementary,107.0,
+68,A0500785,Yeshiva Ohr Elchonon Chabad - West Coast,Los Angeles,CA,private,0,urban,high,63.0,
+69,A0501486,Calvary Christian School,Nampa,ID,private,0,suburban,combined,79.0,
+70,A0503389,Esprit International School,The Woodlands,TX,private,0,urban,combined,94.0,
+71,A0700463,Center Of Life Academy,Miami,FL,private,0,urban,combined,75.0,
+72,A1300716,Genesis Preparatory School,New Port Richey,FL,private,0,suburban,combined,213.0,
+73,A1500659,Benhaven Academy,Wallingford,CT,private,0,suburban,high,27.0,
+74,A1503066,Hope Harbor Children's Home Academy,Claremore,OK,private,0,rural,high,10.0,
+75,A1503410,Sawmill Road School,Punxsutawney,PA,private,0,rural,elementary,21.0,
+76,A1700213,Elite Open School,Rowland Heights,CA,private,0,suburban,combined,434.0,
+77,A1903313,Grace Classical School,Jacksonville,NC,private,0,urban,combined,153.0,
+78,A1903619,Adelphoi Education At Indiana,Indiana,PA,private,0,rural,high,38.0,
+79,A1990639,Wy East Mountain Academy,Welches,OR,private,0,rural,high,64.0,
+80,A2190498,Bishop Leblond High School,Saint Joseph,MO,private,1,urban,high,148.0,
+81,A2192434,Waterloo School,Austin,TX,private,0,urban,high,70.0,
+82,A2300149,Chesterton Academy Of Sacramento,North Highlands,CA,private,0,suburban,high,45.0,
+83,A2301283,Chesterton Academy Of St Marys,Mechanicsville,MD,private,0,rural,high,37.0,
+84,A2301738,Ryken Educational Center,Brooklyn,NY,private,0,urban,high,73.0,
+85,A2301805,Eckerd Connects Boys Residential Academy,Boomer,NC,private,0,rural,high,30.0,
+86,A2302181,Newpath High School,Cincinnati,OH,private,0,suburban,high,50.0,
+87,A2400107,Academy Of St. Elizabeth,Convent Station,NJ,private,1,suburban,high,236.0,
+88,A2400176,Cye Christ Academy,Bay City,TX,private,0,rural,combined,5.0,
+89,A9102318,Aqsa School,Bridgeview,IL,private,1,suburban,combined,307.0,
+90,A9104406,Oakwood School,Tinton Falls,NJ,private,0,suburban,high,26.0,
+91,A9105532,Cedar Grove Christian Academy,Philadelphia,PA,private,1,urban,combined,288.0,
+92,A9106426,Holy Cross Catholic Academy,Amarillo,TX,private,1,urban,combined,121.0,
+93,A9502346,Loyola High School,Detroit,MI,private,1,urban,high,170.0,
+94,A9503154,North Kannapolis Christian Academy,Kannapolis,NC,private,0,suburban,elementary,48.0,
+95,A9703217,Christ Classical Academy,Dyersburg,TN,private,0,rural,combined,173.0,
+96,A9902672,Center Place Restoration School,Independence,MO,private,1,suburban,combined,232.0,
+97,BB161917,Talmud Torah Ohr Moshe,Brooklyn,NY,private,0,urban,high,117.0,
+98,BB170376,Kinwest Montessori Academy,Irving,TX,private,0,urban,elementary,120.0,
+99,X1282977,James Valley Christian School,Huron,SD,private,1,rural,combined,228.0,
