@@ -4,6 +4,58 @@ All notable changes to the `us-k12-schools` dataset. Versions correspond to git 
 the [SchoolData](https://github.com/bxshan/SchoolData) source repository; each entry
 records the exact inputs the release was built from so any version can be rebuilt.
 
+## [v0.3] — 2026-10-11
+
+A fresh rebuild of v0.2 from scratch: same pipeline and NCES data, with Wikipedia
+re-crawled and article text re-fetched on 2026-10-11. v0.2 was never uploaded, so this
+is the first release after v0.1 on Hugging Face; all of v0.2's changes from v0.1 apply.
+
+### Contents
+- **122,476 rows**, one per NCES school ID (100,237 public / 22,239 private, 56 states
+  and territories) — the same schools as v0.2.
+- **15,163 rows (12.4%)** with `from_wikipedia = 1` — full English Wikipedia articles
+  (median 1,980 characters).
+- **107,313 rows (87.6%)** with `from_wikipedia = 0` — rendered from NCES data
+  (median 490 characters).
+- ~98.4M characters of text total.
+
+### Changes from v0.2
+- **Wikipedia text** re-fetched 2026-10-11, each article pinned by `wikipedia_revid`.
+- **Which schools carry Wikipedia text.** 17 schools differ from v0.2: 6 gain an
+  article, 6 lose theirs, and 5 keep it under a renamed title. The losses follow edits
+  on Wikipedia between the crawls: an article turned into a redirect, articles that now
+  say the school closed, and articles no longer in the school categories.
+- **Match tiers** moved slightly: Wikidata NCES id 11,211 (v0.2: 11,213), fuzzy name
+  699 (697); the other tiers are unchanged.
+
+### Changes from v0.1 (the version on Hugging Face)
+As described under v0.2, recounted for this build: 122,302 schools are in both
+versions, 373 v0.1 school IDs are gone and 174 are new. Of the schools in both,
+13,407 have Wikipedia text in both versions; 1,696 gain it and 445 lose it; 50 keep it
+from a different or renamed article. `make baseline` passes: every state's row count is
+within ±5% of v0.1 (122,675 → 122,476 rows).
+
+### Inputs
+| Input | Provenance |
+|---|---|
+| Source repository | the commit tagged `v0.3` (exact hash and a clean-tree flag in `build_manifest.json`); data rebuilt from scratch at `e5fa9e8` |
+| NCES master | `data/nces_crawl/output_all_schools/all_schools_master.csv`, sha256 `1bd68f4f…` — unchanged from v0.2 |
+| Wikipedia crawl | category tree crawled 2026-10-11 with `--include-defunct` — 24,051 candidates, Wikidata-tagged |
+| Matches | `data_publish/output/wiki_nces_matches.csv`, sha256 `a15f19c8…` — 15,164 matches |
+| Wikipedia text | `wiki_crawl/output/wiki_articles.jsonl`, sha256 `41db4b53…` — 15,164 articles (1 empty), retrieved 2026-10-11 |
+
+Full sha256 values and counts are in `build_manifest.json` from the build.
+
+### Match quality decisions
+Unchanged from v0.2. Tiers: Wikidata NCES id (11,211; 4 ids rejected on grade level),
+re-issued NCES id (69), exact name + state (2,605), fuzzy name (699), nearest NCES
+school within 1 km sharing a distinctive name word (580). Unmatched verified schools in
+`wiki_unmatched.csv`: 1,650 open schools with no NCES record or a very different name;
+1,501 closed or historic; 60 lost to a stronger match; 12 with no location.
+
+### Known limitations
+As for v0.2.
+
 ## [v0.2] — 2026-09-30
 
 Rebuilt from scratch with a pipeline that now lives entirely in the source repository
