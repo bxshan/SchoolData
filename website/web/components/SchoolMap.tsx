@@ -32,7 +32,7 @@ const POINTS_LOAD_AT = 6.8; // lazy-load the big point file a bit early
 
 const NO_DATA: [number, number, number] = [210, 216, 224];
 
-// Coverage ramp (RdYlGn): low % = red "data desert", high % = green.
+// Coverage ramp (RdYlGn): low % = red, high % = green.
 const RAMP: [number, [number, number, number]][] = [
   [0.03, [165, 0, 38]],
   [0.06, [215, 48, 39]],
@@ -304,7 +304,7 @@ export default function SchoolMap() {
       <header className="topbar">
         <div className="brand">
           SchoolData
-          <span className="tagline">Make every school visible.</span>
+          <span className="tagline">Every school, on the record.</span>
         </div>
 
         <div className="search">

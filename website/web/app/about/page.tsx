@@ -6,7 +6,7 @@ import { pageStates, stateName, statePath } from "../../lib/schools";
 export const metadata: Metadata = {
   title: "About — SchoolData",
   description:
-    "SchoolData is a student-led open data project making every US K-12 school visible to AI.",
+    "SchoolData is a student-led open data project building a consistent, sourced record of every US K-12 school.",
 };
 
 // Headline numbers come from the same file the map uses, so they never drift.
@@ -26,39 +26,53 @@ export default function About() {
       </nav>
 
       <section className="about-hero">
-        <h1>Make every school visible.</h1>
+        <h1>Every school, on the record.</h1>
         <p>
-          SchoolData is a student-led open data project. We’re building verified,
-          structured data for every K–12 school in the US, so AI and search can
-          know about all of them, not just the famous ones.
+          SchoolData is a student-led open data project. We bring federal, state
+          and school sources together into one consistent record for every K–12
+          school in the US, attach a source to every fact, and ask schools to
+          confirm what we found.
         </p>
       </section>
 
       <section className="about-band">
-        <h2>The data desert.</h2>
+        <h2>Uneven coverage.</h2>
         <p className="lead">
-          AI tools like ChatGPT and Gemini learn much of what they know from
-          Wikipedia and the public web. A school with no presence there is
-          invisible to them.
+          Information about schools is scattered across federal statistics, state
+          directories and school websites, and it is unevenly represented in
+          Wikipedia and Wikidata, which search engines and AI tools draw on
+          heavily. A large high school may have a detailed article; the middle
+          school nearby often has only a directory listing.
         </p>
         <div className="about-stats">
           <div><b>{fmt(total)}</b><span>K–12 schools in federal records</span></div>
           <div><b className="green">{pct.toFixed(1)}%</b><span>have an English Wikipedia page</span></div>
-          <div><b className="red">{fmt(missing)}</b><span>have none at all</span></div>
+          <div><b className="red">{fmt(missing)}</b><span>have no article</span></div>
         </div>
         <p className="muted">
-          The gap falls hardest on under-resourced and rural schools, the
-          communities that would benefit most from being seen.
+          Most articles are about high schools. How coverage varies with locale
+          and school poverty is something we are measuring, not assuming.
+        </p>
+      </section>
+
+      <section className="about-section">
+        <h2>What we add.</h2>
+        <p className="lead">
+          Federal data is the starting point, not the product. For each school we
+          measure whether Wikipedia and Wikidata cover it, compare federal, state
+          and school records and flag where they disagree, link every fact to a
+          public source, add facts federal data does not carry (year opened,
+          namesake, programs, awards), and ask the school to confirm the result.
         </p>
       </section>
 
       <section className="about-section">
         <h2>Work with us.</h2>
         <p className="lead">
-          Help complete the record for your school or district. Reply to confirm
-          interest, and name a student or staff member who can spend a short
-          time filling in publicly available facts. We handle the outreach and
-          the data; the time asked of your contact is minimal.
+          Help complete the record for your school or district. We send a short
+          fact sheet compiled from public sources; someone at the school marks
+          each fact correct or incorrect and fills in what we could not find. It
+          takes about ten minutes.
         </p>
         <a className="about-cta" href="mailto:boxuan.shan@gmail.com">
           Get in touch

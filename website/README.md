@@ -1,7 +1,7 @@
 # SchoolData — website
 
 Every US K-12 school (public + private) on one map — **red = no Wikipedia article
-yet**. An open dataset and a call to action for closing the school "data desert."
+yet**. An open, sourced dataset showing where school coverage is thin.
 
 The map shows the same NCES schools and Wikipedia matches as the
 [Hugging Face dataset](https://huggingface.co/datasets/SchoolData/us-k12-schools)

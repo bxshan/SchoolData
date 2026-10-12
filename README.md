@@ -1,32 +1,48 @@
 # SchoolData
 
-**Make every school visible in the age of AI.**
+**A consistent, sourced, openly reusable record of every US K–12 school.**
 
 SchoolData is an open-source, student-led initiative — fiscally sponsored by
 **Hack Club Bank, a 501(c)(3) nonprofit** — that maps every US K–12 school and
-closes the gap leaving thousands of them invisible to the systems shaping our future.
+builds one consistent, sourced layer of information about each of them.
 
-Large language models (ChatGPT, Gemini, …) and search engines learn the world
-largely from **Wikipedia and structured web data**. Thousands of US schools have no
-comprehensive digital profile — so they are **underrepresented or entirely absent**
-from the datasets that train modern AI. We call this the school **"data desert."**
+Information about US schools already exists, but it is **fragmented**: federal
+statistics in NCES, state directories, district and school websites, local news.
+It is **inconsistently structured**, and it is **unevenly represented** in the
+public knowledge systems that search engines and AI models draw on most,
+Wikipedia and Wikidata:
 
 - **~122,000** US K–12 schools — about 100,000 public and 22,000 private.
-- Only **about 1 in 8 (≈12%)** has an English Wikipedia article — *visible* to AI.
-- The other **~107,000** have **no article at all** — *invisible* to the algorithms.
+- About **1 in 8 (≈12%)** has an English Wikipedia article, and most of those are
+  high schools: fewer than **2%** of middle and elementary schools have one.
+- On Wikidata, only about **12,800** US school items carry an NCES id.
 
 *Current exact counts, by state, are in the
 [dataset card](https://huggingface.co/datasets/SchoolData/us-k12-schools).*
 
-This isn't cosmetic. When a school is missing from the open web, it is effectively
-**erased from the AI era**: it can't be summarized, recommended, cited, or
-remembered by the tools students, parents, and researchers increasingly rely on.
-The cost falls hardest on under-resourced communities, compounding existing
-inequity into **algorithmic bias**.
+So a large high school may have a detailed, cited article, while the middle school
+down the road has little beyond a directory listing — and the directory itself can
+be out of date. Whether this gap also follows locale or school poverty is something
+we are measuring, not assuming.
 
-**SchoolData exists to fix the data, not just to flag the problem.** We turn cold
-federal statistics into living, community-verified profiles and put every school
-back on the public record — so no school is left off the map.
+### What SchoolData adds beyond NCES
+
+NCES already publishes good federal statistics; re-formatting them is not the point.
+SchoolData adds the layer around them:
+
+- **Measuring representation** — which schools have a Wikipedia article or a
+  Wikidata item, matched to NCES ids, school by school.
+- **Reconciling sources** — NCES, state directories and school websites are
+  compared, and conflicts are flagged (for example, outdated website links in a
+  state directory).
+- **Provenance** — every fact carries a link to a public source that states it.
+- **Verification** — schools confirm or correct their own fact sheets; contributors
+  add sources and flag errors, with a source for every correction.
+- **Facts NCES does not carry** — year opened, namesake, former names, mascot,
+  programs, awards — only when a public source states them.
+- **Reusable outputs** — an open dataset and tools that researchers and developers
+  can use, and, where the Wikidata community agrees it fits, structured facts
+  contributed back to Wikidata.
 
 ---
 
@@ -46,20 +62,22 @@ then match articles back to NCES schools — by Wikidata NCES id, name + state,
 fuzzy name, or coordinates, each checked against the school's city and grade
 span. Every school is flagged `has_wikipedia: 0|1`.
 
-### 3 · Fill the gap — community verification
-Federal stats can't capture a school's true legacy. Anyone can open a school and
+### 3 · Fill the gap — sourced fact sheets and verification
+Federal statistics can't capture a school's history or programs. For each school we
+compile a short **fact sheet** — NCES and state-directory facts plus researched
+facts, each with its source — and ask the school to confirm it (see
+[`fact-sheet/`](fact-sheet/README.md)). Anyone can also open a school and
 **verify, not author**: we show the facts we already have (from NCES + Wikipedia)
 read-only, and contributors do two high-trust, low-friction things:
 1. **Add sources** we can cite — school homepage, news coverage, official materials.
 2. **Flag incorrect facts** — every correction must carry a source link.
 
-### 4 · Close the loop — publish an open dataset for AI
-Package the curated, community-verified profiles as an **open dataset on
-[Hugging Face](https://huggingface.co/datasets/SchoolData/us-k12-schools)**, formatted and licensed for **foundation model
-training and fine-tuning**. Instead of waiting for schools to trickle into web
-crawls, we put their verified data *directly* into the corpus models learn from —
-making every school visible to AI at the source, and turning the data desert into a
-reusable public good.
+### 4 · Close the loop — publish an open dataset
+Package the curated profiles as an **open dataset on
+[Hugging Face](https://huggingface.co/datasets/SchoolData/us-k12-schools)**, one
+consistent record per school with its provenance, licensed for research and for
+model training. Researchers and developers get the same baseline of sourced facts
+for every school, not only for the ones that already have a Wikipedia article.
 
 ---
 
@@ -68,7 +86,9 @@ reusable public good.
 | Directory | What's there |
 |---|---|
 | [`data/`](data/README.md) | the data pipeline — NCES, Wikipedia crawl + matching, and the Hugging Face release (`make` builds everything) |
+| [`fact-sheet/`](fact-sheet/README.md) | per-school fact sheets: research inputs, generated sheets (by NCES id), and the Google Doc filler used for school verification |
 | [`website/`](website/README.md) | the map: Next.js + Deck.gl frontend and the script that builds its data |
+| [`k12-ai-index/`](k12-ai-index/README.md) | K12 AI Index (K12-AII): research code that tests how well major LLMs know schools with vs. without a Wikipedia article |
 
 ## Credits
 

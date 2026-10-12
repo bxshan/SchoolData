@@ -4,10 +4,10 @@ import { SITE_URL } from "../lib/schools";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "SchoolData — the US K-12 Wikipedia data desert",
+  title: "SchoolData — a sourced record of every US K-12 school",
   description:
-    "Every US K-12 school (public + private) on one map. Red = no Wikipedia article yet. " +
-    "An open dataset and call to action.",
+    "Every US K-12 school (public + private) on one map, with Wikipedia coverage by state and county. " +
+    "Red = no Wikipedia article yet. An open, sourced dataset.",
 };
 
 export default function RootLayout({

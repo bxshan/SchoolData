@@ -18,14 +18,14 @@ configs:
 Encyclopedic text for **every one of the @@rows@@ K–12 schools in the United States**,
 ready to use as pretraining text.
 
-Ask a language model about a large suburban high school and it will answer. Ask it about
-the K–8 school in a rural county of 4,000 people and it has nothing to say — because
-nothing about that school was ever written down on the open web. Only about
-**@@matched_pct@@%** of American schools have a Wikipedia article at all, and
-**@@wiki_pct@@%** of the rows here carry Wikipedia text once unreliable matches are
-excluded. This dataset covers the rest too, by deterministically rendering public federal
-data into prose, so that every school is visible to a model at the point where models
-actually learn: the corpus.
+Information about American schools is fragmented and unevenly represented in the public
+sources that language models learn from. Only about **@@matched_pct@@%** of schools have a
+Wikipedia article, and most of those are high schools; for most others, the main public
+record is a federal directory listing. This dataset gives every school one consistent,
+sourced text record: the school's Wikipedia article where a verified one exists
+(**@@wiki_pct@@%** of rows, once unreliable matches are excluded), and otherwise a
+paragraph rendered deterministically from public federal data. Every row says where its
+text came from.
 
 ```python
 from datasets import load_dataset
@@ -109,9 +109,10 @@ shorter sentence rather than a guess. Nothing in these rows is invented.
 
 **Wikipedia coverage is unevenly distributed, and that is the problem this project exists
 to document.** Among states with at least 100 schools, coverage ranges from
-@@coverage_low@@ up to @@coverage_high@@. Schools in rural and under-resourced communities
-are markedly less likely to have an article. Training on `from_wikipedia = 1` alone would
-inherit that bias wholesale.
+@@coverage_low@@ up to @@coverage_high@@. Coverage also differs
+sharply by level: most articles are about high schools. How coverage varies with locale
+and school poverty has not been measured yet, so this card makes no claim about it.
+Training on `from_wikipedia = 1` alone would inherit whatever skew exists.
 
 **Generated rows are thin by construction.** They contain only what NCES records —
 location, grade range, district, enrollment, staffing, and for private schools religious
