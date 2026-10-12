@@ -1,0 +1,153 @@
+{
+  "nces_id": "060204712236",
+  "name": "KIPP San Jose Collegiate",
+  "cds_code": "43694270116889",
+  "compiled": "2026-10-11",
+  "questions": [
+    "Is the school mascot the Wolfpack, and are the school colors purple? (I only found these on unofficial pages.)",
+    "Did the school open in August 2008? (The state directory lists August 11, 2008.)",
+    "Is there a story behind the name \"Collegiate,\" and has the school ever had another name?"
+  ],
+  "facts": [
+    {
+      "fact": "Official name",
+      "value": "KIPP San Jose Collegiate (your website writes \"KIPP San José Collegiate\")",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=060204712236"
+        },
+        {
+          "label": "School website",
+          "url": "https://kippnorcal.org/school/kipp-san-jose-collegiate/"
+        }
+      ]
+    },
+    {
+      "fact": "School type",
+      "value": "Public charter high school (charter #0976, directly funded; not magnet)",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=060204712236"
+        },
+        {
+          "label": "CA Dept. of Education school data 2025–26",
+          "url": "https://gis.data.ca.gov/datasets/CDEGIS::california-public-schools-2025-26"
+        }
+      ]
+    },
+    {
+      "fact": "Grades",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "District / charter authorizer",
+      "value": "Its own local education agency in federal data (\"KIPP San Jose Collegiate District\"); the state lists it under East Side Union High School District",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=060204712236"
+        },
+        {
+          "label": "CA Dept. of Education",
+          "url": "https://sd.cde.ca.gov/schooldirectory/details?cdscode=43694270116889"
+        }
+      ]
+    },
+    {
+      "fact": "Address",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Enrollment",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Teachers",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Official website",
+      "value": "https://kippnorcal.org/school/kipp-san-jose-collegiate/",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://kippnorcal.org/school/kipp-san-jose-collegiate/"
+        }
+      ]
+    },
+    {
+      "fact": "Year opened",
+      "value": "2008 (state directory open date: August 11, 2008)",
+      "sources": [
+        {
+          "label": "CA Dept. of Education school data 2025–26",
+          "url": "https://gis.data.ca.gov/datasets/CDEGIS::california-public-schools-2025-26"
+        }
+      ]
+    },
+    {
+      "fact": "Mascot",
+      "value": "Wolfpack (listed on Wikipedia without a working source; not confirmed on an official page)",
+      "sources": [
+        {
+          "label": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/KIPP_San_Jose_Collegiate"
+        }
+      ]
+    },
+    {
+      "fact": "School colors",
+      "value": "Purple (listed on Wikipedia without a source; not confirmed on an official page)",
+      "sources": [
+        {
+          "label": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/KIPP_San_Jose_Collegiate"
+        }
+      ]
+    },
+    {
+      "fact": "Origin of the name",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Former names",
+      "value": "*None found*",
+      "sources": []
+    },
+    {
+      "fact": "Programs",
+      "value": "College-prep coursework meeting UC A–G requirements; Advanced Placement; dual enrollment; electives including art, computer science and music; athletics (baseball, basketball, soccer, wrestling, volleyball, softball, cheerleading, cross country); clubs including debate, robotics, Model UN, Girls Who Code, jazz band, theatre and yearbook",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://kippnorcal.org/school/kipp-san-jose-collegiate/"
+        }
+      ]
+    },
+    {
+      "fact": "Awards and recognitions",
+      "value": "Accredited by ACS WASC (status: Accredited); 2021 California Distinguished School",
+      "sources": [
+        {
+          "label": "ACS WASC directory (search \"KIPP\")",
+          "url": "https://directory.acswasc.org/"
+        },
+        {
+          "label": "CDE 2021 awardees",
+          "url": "https://www.cde.ca.gov/ta/sr/cs/awardees2021.asp"
+        },
+        {
+          "label": "School website",
+          "url": "https://kippnorcal.org/school/kipp-san-jose-collegiate/"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "nces_id": "061029009356",
+  "name": "Christa McAuliffe School",
+  "cds_code": "43694196046932",
+  "compiled": "2026-10-11",
+  "questions": [
+    "Which year should we list as the school's founding year? Your Our History page says the program began in 1971 and the school opened as Christa McAuliffe School in 1988, while the state directory lists July 1, 1980.",
+    "Does the school have a mascot and school colors?",
+    "Is \"Christa McAuliffe School\" the name you'd like used everywhere? (Federal records list \"Christa McAuliffe,\" and your website's page titles say \"McAuliffe Elementary School.\")"
+  ],
+  "facts": [
+    {
+      "fact": "Official name",
+      "value": "Christa McAuliffe School (federal and state records list \"Christa McAuliffe\"; your website's page titles say \"McAuliffe Elementary School\")",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=061029009356"
+        },
+        {
+          "label": "School website",
+          "url": "https://mcauliffe.cusdk8.org/"
+        }
+      ]
+    },
+    {
+      "fact": "School type",
+      "value": "Public alternative school, TK–8 (not charter, not magnet); admission through the district's open enrollment lottery",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=061029009356"
+        },
+        {
+          "label": "CA Dept. of Education",
+          "url": "https://sd.cde.ca.gov/schooldirectory/details?cdscode=43694196046932"
+        },
+        {
+          "label": "Joining McAuliffe",
+          "url": "https://mcauliffe.cusdk8.org/for-future-families/how-to-join-mcauliffe"
+        }
+      ]
+    },
+    {
+      "fact": "Grades",
+      "value": "TK–8 (federal and state records list K–8)",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://mcauliffe.cusdk8.org/"
+        },
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=061029009356"
+        },
+        {
+          "label": "CA Dept. of Education",
+          "url": "https://sd.cde.ca.gov/schooldirectory/details?cdscode=43694196046932"
+        }
+      ]
+    },
+    {
+      "fact": "District",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Address",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Enrollment",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Teachers",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Official website",
+      "value": "https://mcauliffe.cusdk8.org/",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://mcauliffe.cusdk8.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Year opened",
+      "value": "1988 as Christa McAuliffe School; the program began in 1971 (state directory open date: July 1, 1980)",
+      "sources": [
+        {
+          "label": "Our History",
+          "url": "https://mcauliffe.cusdk8.org/about-us/our-history"
+        },
+        {
+          "label": "CA Dept. of Education",
+          "url": "https://sd.cde.ca.gov/schooldirectory/details?cdscode=43694196046932"
+        }
+      ]
+    },
+    {
+      "fact": "Mascot",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "School colors",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Named after",
+      "value": "Christa McAuliffe, the teacher-astronaut",
+      "sources": [
+        {
+          "label": "Our History",
+          "url": "https://mcauliffe.cusdk8.org/about-us/our-history"
+        }
+      ]
+    },
+    {
+      "fact": "Former names",
+      "value": "Open Kindergarten program (1971, at Eaton Elementary); Muir Alternative Program (from 1975–76, at John Muir School)",
+      "sources": [
+        {
+          "label": "Our History",
+          "url": "https://mcauliffe.cusdk8.org/about-us/our-history"
+        }
+      ]
+    },
+    {
+      "fact": "Programs",
+      "value": "Parent-participation, project-based TK–8 program; self-contained middle school program (grades 6–8) with CPM math through Geometry; cooking, gardening, Creative Explorations and electives; overnight field trips from 4th grade; buddies program; student productions",
+      "sources": [
+        {
+          "label": "TK-5 Program",
+          "url": "https://mcauliffe.cusdk8.org/about-us/mcauliffe-program"
+        },
+        {
+          "label": "Middle School Program",
+          "url": "https://mcauliffe.cusdk8.org/about-us/mcauliffe-middle-school-6th-8th-grade"
+        },
+        {
+          "label": "Schoolwide Program",
+          "url": "https://mcauliffe.cusdk8.org/about-us/schoolwide"
+        }
+      ]
+    },
+    {
+      "fact": "Awards and recognitions",
+      "value": "*None found*",
+      "sources": []
+    }
+  ]
+}

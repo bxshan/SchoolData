@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 # Author: Boxuan Shan, with support from Claude (Anthropic)
-"""Turn per-school fact sheets into data for the school pages.
+"""Turn the fact-sheet research files into data for the school pages.
 
-Each fact sheet is a Markdown file whose English part starts with a bold title
-line containing "Fact Sheet" and holds a numbered table:
-
-    | # | Fact | Value we found | Source | ✅ / ❌ + correction |
-
-Only that table is read; everything else in the file is ignored. The school is
-identified by the NCES id in the table's NCES links (school_detail.asp?ID=...).
+Reads fact-sheet/research/<nces_id>.json (see fact-sheet/README.md) and builds
+its 15 rows with fact-sheet/build_sheets.py's own build_rows(): rows 1-7 from
+the NCES master and the CDE directory, rows 8-15 from the research. So a page
+always shows exactly the rows of the sheet sent to the school.
 
 Output: web/public/data/school_fact_sheets.json
   { nces_id: { asOf: "YYYY-MM-DD",
@@ -16,15 +13,15 @@ Output: web/public/data/school_fact_sheets.json
                missing: [ fact, ... ] } }
   `facts` holds only rows with a value; rows whose value starts with "Not found"
   or "None found" go to `missing`, so the page can ask the school for them.
-  The sheets are written to the school ("your website writes ..."); that wording
-  is rewritten to third person, since the output is shown on public pages.
+  Values are plain text (Markdown links keep their text). The research is
+  written for the school ("your website writes ..."); that wording is rewritten
+  to third person, since the output is shown on public pages.
 
 Usage:
-    python build_fact_sheets.py <fact-sheet-dir> [--as-of YYYY-MM-DD]
+    python build_fact_sheets.py [research-dir]   # default: ../../fact-sheet/research
 """
 
 import argparse
-import datetime
 import glob
 import json
 import os
@@ -32,34 +29,18 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+FACT_SHEET = os.path.join(HERE, "..", "..", "fact-sheet")
 OUT = os.path.join(HERE, "..", "web", "public", "data", "school_fact_sheets.json")
 SCHOOLS = os.path.join(HERE, "..", "web", "public", "data", "schools.json")
 
-TITLE = re.compile(r"^\*\*[^*\n]*Fact Sheet[^*\n]*\*\*$", re.M)
-ROW = re.compile(r"^\|\s*\d+\s*\|")
+sys.path.insert(0, FACT_SHEET)
+from build_sheets import CDE, NOT_FOUND, build_rows, load_master  # noqa: E402
+
 LINK = re.compile(r"\[([^\]]+)\]\((https?://[^)\s]+)\)")
-NCES_ID = re.compile(r"school_detail\.asp\?ID=(\w+)")
-NOT_FOUND = re.compile(r"^\*?(not found|none found)\b", re.I)
-
-
-def english_table(text):
-    """Rows of the English fact table: [(fact, value, source_cell), ...]."""
-    m = TITLE.search(text)
-    if not m:
-        return None, []
-    part = text[m.start():].split("\n---", 1)[0]
-    rows = []
-    for line in part.splitlines():
-        if ROW.match(line):
-            cells = [c.strip() for c in line.strip().strip("|").split("|")]
-            if len(cells) >= 4:
-                rows.append((cells[1], cells[2], cells[3]))
-    ids = set(NCES_ID.findall(part))
-    return (ids.pop() if len(ids) == 1 else None), rows
 
 
 def plain(value):
-    """Markdown cell -> plain text: links keep their text, emphasis goes, and
+    """Markdown value -> plain text: links keep their text, emphasis goes, and
     "your website" (addressed to the school) becomes "the school website"."""
     value = LINK.sub(r"\1", value)
     value = re.sub(r"\byour website('s)?", lambda m: "the school website" + (m.group(1) or ""),
@@ -67,42 +48,45 @@ def plain(value):
     return re.sub(r"\*+", "", value).strip()
 
 
-def parse(path):
-    with open(path, encoding="utf-8") as fh:
-        sid, rows = english_table(fh.read())
-    if not sid:
-        return None, None
+def page_data(r, row, cde):
     facts, missing = [], []
-    for fact, value, source in rows:
-        if NOT_FOUND.match(value.strip()):
-            missing.append(plain(fact))
+    for fact, value, sources in build_rows(r, row, cde):
+        if NOT_FOUND.match(value):
+            missing.append(fact)
             continue
-        facts.append({"f": plain(fact), "v": plain(value),
-                      "s": [[label, url] for label, url in LINK.findall(source)]})
-    return sid, {"facts": facts, "missing": missing}
+        facts.append({"f": fact, "v": plain(value),
+                      "s": [[s["label"], s["url"]] for s in sources if s.get("url")]})
+    return {"asOf": r["compiled"], "facts": facts, "missing": missing}
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("dir", help="folder of fact-sheet .md files")
-    ap.add_argument("--as-of", default=datetime.date.today().isoformat(),
-                    help="date the facts were compiled (default: today)")
+    ap.add_argument("dir", nargs="?", default=os.path.join(FACT_SHEET, "research"),
+                    help="folder of research/<nces_id>.json files")
     ap.add_argument("--out", default=OUT)
     args = ap.parse_args()
 
+    research = []
+    for path in sorted(glob.glob(os.path.join(args.dir, "*.json"))):
+        with open(path, encoding="utf-8") as fh:
+            research.append(json.load(fh))
     with open(SCHOOLS, encoding="utf-8") as fh:
-        known = {s["i"] for s in json.load(fh)}
+        on_map = {s["i"] for s in json.load(fh)}
+    master = load_master({r["nces_id"] for r in research})
+    cde_all = {}
+    if os.path.exists(CDE):
+        with open(CDE, encoding="utf-8") as fh:
+            cde_all = json.load(fh)
 
     out, skipped = {}, []
-    for path in sorted(glob.glob(os.path.join(args.dir, "*.md"))):
-        sid, sheet = parse(path)
-        name = os.path.basename(path)
-        if not sid:
-            skipped.append(f"{name}: no English fact table with one NCES id")
-        elif sid not in known:
-            skipped.append(f"{name}: NCES id {sid} is not in schools.json")
+    for r in research:
+        sid = r["nces_id"]
+        if sid not in master:
+            skipped.append(f"{sid}: not in the NCES master")
+        elif sid not in on_map:
+            skipped.append(f"{sid}: not in schools.json")
         else:
-            out[sid] = {"asOf": args.as_of, **sheet}
+            out[sid] = page_data(r, master[sid], cde_all.get(sid))
 
     with open(args.out, "w", encoding="utf-8") as fh:
         json.dump(out, fh, separators=(",", ":"), ensure_ascii=False)

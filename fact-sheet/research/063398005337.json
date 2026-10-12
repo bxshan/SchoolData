@@ -1,0 +1,121 @@
+{
+  "nces_id": "063398005337",
+  "name": "Washington Middle School",
+  "cds_code": "27661596058770",
+  "compiled": "2026-10-11",
+  "questions": [
+    "What year did Washington Middle open? (The state directory lists July 1, 1980, but that may be the date the record was created.)",
+    "What are the school colors?",
+    "Who or what is the school named after?"
+  ],
+  "facts": [
+    {
+      "fact": "Official name",
+      "value": "Washington Middle School",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=063398005337"
+        },
+        {
+          "label": "School website",
+          "url": "https://wms.salinasuhsd.org/"
+        }
+      ]
+    },
+    {
+      "fact": "School type",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Grades",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "District",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Address",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Enrollment",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Teachers",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Official website",
+      "value": "https://wms.salinasuhsd.org/",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://wms.salinasuhsd.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Year opened",
+      "value": "*Not confirmed* (state directory open date: July 1, 1980, which may be a record date rather than the first school year)",
+      "sources": [
+        {
+          "label": "CA Dept. of Education",
+          "url": "https://sd.cde.ca.gov/schooldirectory/details?cdscode=27661596058770"
+        }
+      ]
+    },
+    {
+      "fact": "Mascot",
+      "value": "Broncos",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://wms.salinasuhsd.org/"
+        }
+      ]
+    },
+    {
+      "fact": "School colors",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Origin of the name \"Washington\"",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Former names",
+      "value": "*None found*",
+      "sources": []
+    },
+    {
+      "fact": "Programs",
+      "value": "AVID; National Junior Honor Society; Common Core 8 Advanced math; English Language Development; homework center; ASB; clubs; athletics; PBIS; summer bridge program",
+      "sources": [
+        {
+          "label": "Area of Study",
+          "url": "https://wms.salinasuhsd.org/for-students/academics/area-of-study"
+        },
+        {
+          "label": "School website",
+          "url": "https://wms.salinasuhsd.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Awards and recognitions",
+      "value": "*None found*",
+      "sources": []
+    }
+  ]
+}

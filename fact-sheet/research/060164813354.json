@@ -1,0 +1,151 @@
+{
+  "nces_id": "060164813354",
+  "name": "Summit Public School: Shasta",
+  "cds_code": "41689240127548",
+  "compiled": "2026-10-11",
+  "questions": [
+    "Has the school ever had another name?",
+    "Does the school have a mascot and school colors?",
+    "Is the name \"Shasta\" a reference to Mount Shasta, and is there a story behind choosing it?"
+  ],
+  "facts": [
+    {
+      "fact": "Official name",
+      "value": "Summit Public School: Shasta (commonly \"Summit Shasta\")",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=060164813354"
+        },
+        {
+          "label": "School website",
+          "url": "https://summitps.org/our-schools/summit-shasta-daly-city/"
+        }
+      ]
+    },
+    {
+      "fact": "School type",
+      "value": "Public charter high school (charter #1500, directly funded; not magnet)",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=060164813354"
+        },
+        {
+          "label": "CA Dept. of Education school data 2025–26",
+          "url": "https://gis.data.ca.gov/datasets/CDEGIS::california-public-schools-2025-26"
+        }
+      ]
+    },
+    {
+      "fact": "Grades",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "District / charter authorizer",
+      "value": "Its own local education agency in federal data (\"Summit Public School: Shasta District\"); the state lists it under Jefferson Union High School District",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=060164813354"
+        },
+        {
+          "label": "CA Dept. of Education",
+          "url": "https://sd.cde.ca.gov/schooldirectory/details?cdscode=41689240127548"
+        }
+      ]
+    },
+    {
+      "fact": "Address",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Enrollment",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Teachers",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Official website",
+      "value": "https://summitps.org/our-schools/summit-shasta-daly-city/",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://summitps.org/our-schools/summit-shasta-daly-city/"
+        }
+      ]
+    },
+    {
+      "fact": "Year opened",
+      "value": "2013 (state directory open date: September 1, 2013); first graduating class in 2017",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://summitps.org/our-schools/summit-shasta-daly-city/"
+        },
+        {
+          "label": "CA Dept. of Education school data 2025–26",
+          "url": "https://gis.data.ca.gov/datasets/CDEGIS::california-public-schools-2025-26"
+        }
+      ]
+    },
+    {
+      "fact": "Mascot",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "School colors",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Origin of the name \"Shasta\"",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Former names",
+      "value": "*None found*",
+      "sources": []
+    },
+    {
+      "fact": "Programs",
+      "value": "Summit model with Expeditions (led by a Dean of Expeditions); UC/CSU A–G approved courses; Advanced Placement courses (e.g., AP English Literature); athletics program",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://summitps.org/our-schools/summit-shasta-daly-city/"
+        }
+      ]
+    },
+    {
+      "fact": "Awards and recognitions",
+      "value": "Accredited by ACS WASC (status: Accredited, 6-year cycle); 2026 California Distinguished School",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://summitps.org/our-schools/summit-shasta-daly-city/"
+        },
+        {
+          "label": "ACS WASC directory (search \"Summit\")",
+          "url": "https://directory.acswasc.org/"
+        },
+        {
+          "label": "CCSA list of 2026 honorees",
+          "url": "https://www.ccsa.org/posts/california-charter-public-schools-earn-top-state-honor-as-2026-distinguished-schools"
+        },
+        {
+          "label": "CDE announcement",
+          "url": "https://www.cde.ca.gov/nr/ne/yr26/yr26rel12.asp"
+        }
+      ]
+    }
+  ]
+}

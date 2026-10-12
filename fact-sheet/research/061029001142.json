@@ -1,0 +1,124 @@
+{
+  "nces_id": "061029001142",
+  "name": "Joaquin Miller Middle School",
+  "cds_code": "43694196046882",
+  "compiled": "2026-10-11",
+  "questions": [
+    "What year did Miller open?",
+    "What are the school mascot and school colors?",
+    "Is there a story behind the name \"Joaquin Miller\"?"
+  ],
+  "facts": [
+    {
+      "fact": "Official name",
+      "value": "Joaquin Miller Middle School (federal record: \"Joaquin Miller Middle\")",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=061029001142"
+        },
+        {
+          "label": "About Us",
+          "url": "https://miller.cusdk8.org/about-us"
+        },
+        {
+          "label": "School website",
+          "url": "https://miller.cusdk8.org/"
+        }
+      ]
+    },
+    {
+      "fact": "School type",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Grades",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "District",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Address",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Enrollment",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Teachers",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Official website",
+      "value": "https://miller.cusdk8.org/",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://miller.cusdk8.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Year opened",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Mascot",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "School colors",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Origin of the name",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Former names",
+      "value": "*None found*",
+      "sources": []
+    },
+    {
+      "fact": "Programs",
+      "value": "Middle school site of the Cupertino Language Immersion Program (CLIP, Mandarin); two Extensive Needs classrooms; student council; student clubs; academic competitions; WEB (Where Everyone Belongs); PBIS",
+      "sources": [
+        {
+          "label": "About Us",
+          "url": "https://miller.cusdk8.org/about-us"
+        },
+        {
+          "label": "School website",
+          "url": "https://miller.cusdk8.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Awards and recognitions",
+      "value": "National Blue Ribbon School: 2024. California Distinguished School: 1986, 1990, 1992, 2009, 2013, 2021, 2024",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://miller.cusdk8.org/about-us"
+        },
+        {
+          "label": "CA Dept. of Education, Distinguished Schools awardees 1986–2025 (XLSX)",
+          "url": "https://www.cde.ca.gov/ta/sr/cs/documents/dsawardees1.xlsx"
+        }
+      ]
+    }
+  ]
+}

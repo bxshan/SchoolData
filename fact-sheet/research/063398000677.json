@@ -1,0 +1,126 @@
+{
+  "nces_id": "063398000677",
+  "name": "Harden Middle School",
+  "cds_code": "27661596110753",
+  "compiled": "2026-10-11",
+  "questions": [
+    "Has Harden received any awards or recognitions we should include?",
+    "Is there a story behind the name \"Harden\"?",
+    "Are the school colors black, gray and white? (Your dress code page mentions them as school colors.)"
+  ],
+  "facts": [
+    {
+      "fact": "Official name",
+      "value": "Harden Middle School",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=063398000677"
+        },
+        {
+          "label": "School website",
+          "url": "https://hms.salinasuhsd.org/"
+        }
+      ]
+    },
+    {
+      "fact": "School type",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Grades",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "District",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Address",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Enrollment",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Teachers",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Official website",
+      "value": "https://hms.salinasuhsd.org/",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://hms.salinasuhsd.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Year opened",
+      "value": "1992 (state directory open date: July 6, 1992)",
+      "sources": [
+        {
+          "label": "CA Dept. of Education",
+          "url": "https://sd.cde.ca.gov/schooldirectory/details?cdscode=27661596110753"
+        }
+      ]
+    },
+    {
+      "fact": "Mascot",
+      "value": "Huskies",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://hms.salinasuhsd.org/"
+        }
+      ]
+    },
+    {
+      "fact": "School colors",
+      "value": "Black, gray and white (the dress code refers to \"solid school colors; black, gray or white\")",
+      "sources": [
+        {
+          "label": "Dress Code",
+          "url": "https://hms.salinasuhsd.org/about-us/dress-code"
+        }
+      ]
+    },
+    {
+      "fact": "Origin of the name \"Harden\"",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Former names",
+      "value": "*None found*",
+      "sources": []
+    },
+    {
+      "fact": "Programs",
+      "value": "AVID; Plus+ advanced classes (replacing the former GATE and Advanced classes); Academic Language Development; tutoring; after-school program; ASB; yearbook; athletics; WEB; Wellness Center; Community Schools",
+      "sources": [
+        {
+          "label": "Course Descriptions",
+          "url": "https://hms.salinasuhsd.org/for-students/academics/course-descriptions"
+        },
+        {
+          "label": "School website",
+          "url": "https://hms.salinasuhsd.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Awards and recognitions",
+      "value": "*None found*",
+      "sources": []
+    }
+  ]
+}

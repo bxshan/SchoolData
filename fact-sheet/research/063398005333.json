@@ -1,0 +1,121 @@
+{
+  "nces_id": "063398005333",
+  "name": "El Sausal Middle School",
+  "cds_code": "27661596058762",
+  "compiled": "2026-10-11",
+  "questions": [
+    "What year did El Sausal open? (The state directory lists July 1, 1980, but that may be the date the record was created.)",
+    "What are the school colors?",
+    "Is there a story behind the name \"El Sausal\"?"
+  ],
+  "facts": [
+    {
+      "fact": "Official name",
+      "value": "El Sausal Middle School",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=063398005333"
+        },
+        {
+          "label": "School website",
+          "url": "https://esms.salinasuhsd.org/"
+        }
+      ]
+    },
+    {
+      "fact": "School type",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Grades",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "District",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Address",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Enrollment",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Teachers",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Official website",
+      "value": "https://esms.salinasuhsd.org/",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://esms.salinasuhsd.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Year opened",
+      "value": "*Not confirmed* (state directory open date: July 1, 1980, which may be a record date rather than the first school year)",
+      "sources": [
+        {
+          "label": "CA Dept. of Education",
+          "url": "https://sd.cde.ca.gov/schooldirectory/details?cdscode=27661596058762"
+        }
+      ]
+    },
+    {
+      "fact": "Mascot",
+      "value": "Spartans",
+      "sources": [
+        {
+          "label": "Principal's Message",
+          "url": "https://esms.salinasuhsd.org/about-us/principal-s-message"
+        }
+      ]
+    },
+    {
+      "fact": "School colors",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Origin of the name \"El Sausal\"",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Former names",
+      "value": "*None found*",
+      "sources": []
+    },
+    {
+      "fact": "Programs",
+      "value": "AVID; electives in art, leadership, music and yearbook; English Language Development; ASB; clubs; athletics; Migrant Education; PBIS; Wellness Center",
+      "sources": [
+        {
+          "label": "Areas of Study",
+          "url": "https://esms.salinasuhsd.org/for-students/academics/areas-of-study"
+        },
+        {
+          "label": "School website",
+          "url": "https://esms.salinasuhsd.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Awards and recognitions",
+      "value": "*None found*",
+      "sources": []
+    }
+  ]
+}

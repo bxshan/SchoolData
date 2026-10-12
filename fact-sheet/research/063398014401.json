@@ -1,0 +1,146 @@
+{
+  "nces_id": "063398014401",
+  "name": "Rancho San Juan High School",
+  "cds_code": "27661590136697",
+  "compiled": "2026-10-11",
+  "questions": [
+    "What are the school colors?",
+    "Which career technical education (CTE) pathways does Rancho San Juan offer?",
+    "Is there a story behind the name \"Rancho San Juan\"?"
+  ],
+  "facts": [
+    {
+      "fact": "Official name",
+      "value": "Rancho San Juan High School",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=063398014401"
+        },
+        {
+          "label": "School website",
+          "url": "https://rsjhs.salinasuhsd.org/"
+        }
+      ]
+    },
+    {
+      "fact": "School type",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Grades",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "District",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Address",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Enrollment",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Teachers",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Official website",
+      "value": "https://rsjhs.salinasuhsd.org/",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://rsjhs.salinasuhsd.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Year opened",
+      "value": "2019 (state directory open date: August 7, 2019)",
+      "sources": [
+        {
+          "label": "CA Dept. of Education",
+          "url": "https://sd.cde.ca.gov/schooldirectory/details?cdscode=27661590136697"
+        },
+        {
+          "label": "WASC page",
+          "url": "https://rsjhs.salinasuhsd.org/about-us/accountability/wasc"
+        }
+      ]
+    },
+    {
+      "fact": "Mascot",
+      "value": "Trailblazers",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://rsjhs.salinasuhsd.org/"
+        }
+      ]
+    },
+    {
+      "fact": "School colors",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Origin of the name \"Rancho San Juan\"",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Former names",
+      "value": "*None found*",
+      "sources": []
+    },
+    {
+      "fact": "Programs",
+      "value": "Advanced Placement (18 AP courses listed for the current year); AVID; Puente; band and choir; Hartnell College dual enrollment; Mission Trails ROP courses; career center; Migrant Education; Community Schools. Career technical education (CTE) pathways: *not found*",
+      "sources": [
+        {
+          "label": "Advanced Placement",
+          "url": "https://rsjhs.salinasuhsd.org/for-students/academics/advanced-placement"
+        },
+        {
+          "label": "AVID",
+          "url": "https://rsjhs.salinasuhsd.org/for-students/academics/avid"
+        },
+        {
+          "label": "Puente",
+          "url": "https://rsjhs.salinasuhsd.org/for-students/academics/puente"
+        },
+        {
+          "label": "ROP",
+          "url": "https://rsjhs.salinasuhsd.org/for-students/academics/rop"
+        },
+        {
+          "label": "Dual Enrollment",
+          "url": "https://rsjhs.salinasuhsd.org/for-students/counseling/hartnell-dual-enrollment"
+        }
+      ]
+    },
+    {
+      "fact": "Awards and accreditation",
+      "value": "Accredited by ACS WASC: initial accreditation in 2019; six-year accreditation after the 2023–24 full visit, through 2030, with a mid-cycle review in 2026–27",
+      "sources": [
+        {
+          "label": "ACS WASC directory (search \"Rancho San Juan\")",
+          "url": "https://directory.acswasc.org/new/"
+        },
+        {
+          "label": "School WASC page",
+          "url": "https://rsjhs.salinasuhsd.org/about-us/accountability/wasc"
+        }
+      ]
+    }
+  ]
+}

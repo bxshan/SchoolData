@@ -1,0 +1,121 @@
+{
+  "nces_id": "063398008745",
+  "name": "La Paz Middle School",
+  "cds_code": "27661596118129",
+  "compiled": "2026-10-11",
+  "questions": [
+    "What are the school colors?",
+    "Is there a story behind the name \"La Paz\"?",
+    "Has La Paz received any awards or recognitions we should include?"
+  ],
+  "facts": [
+    {
+      "fact": "Official name",
+      "value": "La Paz Middle School",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=063398008745"
+        },
+        {
+          "label": "School website",
+          "url": "https://lpms.salinasuhsd.org/"
+        }
+      ]
+    },
+    {
+      "fact": "School type",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Grades",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "District",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Address",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Enrollment",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Teachers",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Official website",
+      "value": "https://lpms.salinasuhsd.org/",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://lpms.salinasuhsd.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Year opened",
+      "value": "2001 (state directory open date: June 29, 2001)",
+      "sources": [
+        {
+          "label": "CA Dept. of Education",
+          "url": "https://sd.cde.ca.gov/schooldirectory/details?cdscode=27661596118129"
+        }
+      ]
+    },
+    {
+      "fact": "Mascot",
+      "value": "Panthers",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://lpms.salinasuhsd.org/"
+        }
+      ]
+    },
+    {
+      "fact": "School colors",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Origin of the name \"La Paz\"",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Former names",
+      "value": "*None found*",
+      "sources": []
+    },
+    {
+      "fact": "Programs",
+      "value": "AVID; GATE/Advanced English 8, Science 8 and Art; music (choir, band, percussion); Leadership/ASB; Migrant Education; Wellness Center",
+      "sources": [
+        {
+          "label": "Areas of Study",
+          "url": "https://lpms.salinasuhsd.org/for-students/academics/areas-of-study"
+        },
+        {
+          "label": "About Us",
+          "url": "https://lpms.salinasuhsd.org/about-us"
+        }
+      ]
+    },
+    {
+      "fact": "Awards and recognitions",
+      "value": "*None found*",
+      "sources": []
+    }
+  ]
+}

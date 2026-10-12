@@ -1,0 +1,129 @@
+{
+  "nces_id": "061029001138",
+  "name": "John F. Kennedy Middle School",
+  "cds_code": "43694196046890",
+  "compiled": "2026-10-11",
+  "questions": [
+    "Did Kennedy open in 1963, as John F. Kennedy Junior High? (The state's 1990 and 1992 Distinguished Schools lists use the junior high name.)",
+    "What are the school mascot and school colors?",
+    "Is there a story behind the school's name?"
+  ],
+  "facts": [
+    {
+      "fact": "Official name",
+      "value": "John F. Kennedy Middle School (federal record: \"John F. Kennedy Middle\")",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=061029001138"
+        },
+        {
+          "label": "School website",
+          "url": "https://kennedy.cusdk8.org/about-us"
+        },
+        {
+          "label": "School website",
+          "url": "https://kennedy.cusdk8.org/"
+        }
+      ]
+    },
+    {
+      "fact": "School type",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Grades",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "District",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Address",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Enrollment",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Teachers",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Official website",
+      "value": "https://kennedy.cusdk8.org/",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://kennedy.cusdk8.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Year opened",
+      "value": "*Not found* (Wikipedia says 1963, but cites no source)",
+      "sources": []
+    },
+    {
+      "fact": "Mascot",
+      "value": "*Not found* (Wikipedia says Cougar, \"Chico\", but cites no source)",
+      "sources": []
+    },
+    {
+      "fact": "School colors",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Origin of the name",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Former names",
+      "value": "John F. Kennedy Junior High (the name used on the state's 1990 and 1992 California Distinguished Schools lists)",
+      "sources": [
+        {
+          "label": "CA Dept. of Education, Distinguished Schools awardees 1986–2025 (XLSX)",
+          "url": "https://www.cde.ca.gov/ta/sr/cs/documents/dsawardees1.xlsx"
+        }
+      ]
+    },
+    {
+      "fact": "Programs",
+      "value": "Cupertino Union's Therapeutic Learning Class; student clubs; PBIS; middle school sports",
+      "sources": [
+        {
+          "label": "About Us",
+          "url": "https://kennedy.cusdk8.org/about-us"
+        },
+        {
+          "label": "School website",
+          "url": "https://kennedy.cusdk8.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Awards and recognitions",
+      "value": "California Distinguished School: 1990, 1992 (as John F. Kennedy Junior High), 2013, 2024. Science Olympiad National Tournament: top honors among middle school teams, 2023",
+      "sources": [
+        {
+          "label": "CA Dept. of Education (XLSX)",
+          "url": "https://www.cde.ca.gov/ta/sr/cs/documents/dsawardees1.xlsx"
+        },
+        {
+          "label": "Wichita State University news release, May 2023",
+          "url": "https://wichita.edu/about/wsunews-releases/2023/05-may/science_olympiad_results_7.php"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "nces_id": "061029001127",
+  "name": "Cupertino Middle School",
+  "cds_code": "43694196046767",
+  "compiled": "2026-10-11",
+  "questions": [
+    "What year did Cupertino Middle School open? (The state directory lists July 1, 1980, but that date appears on several older district schools, so it may be a record date rather than the opening year.)",
+    "Is the school mascot the Bears, and what are the school colors?",
+    "Has the school always been called Cupertino Middle School, and is there a story behind the name?"
+  ],
+  "facts": [
+    {
+      "fact": "Official name",
+      "value": "Cupertino Middle School",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=061029001127"
+        },
+        {
+          "label": "School website",
+          "url": "https://cms.cusdk8.org/"
+        }
+      ]
+    },
+    {
+      "fact": "School type",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Grades",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "District",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Address",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Enrollment",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Teachers",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Official website",
+      "value": "https://cms.cusdk8.org/",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://cms.cusdk8.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Year opened",
+      "value": "*Not found* (state directory open date: July 1, 1980)",
+      "sources": [
+        {
+          "label": "CA Dept. of Education",
+          "url": "https://sd.cde.ca.gov/schooldirectory/details?cdscode=43694196046767"
+        }
+      ]
+    },
+    {
+      "fact": "Mascot",
+      "value": "Bears (as in \"Bear Pride\" and the \"Bears Athletic Crew\")",
+      "sources": [
+        {
+          "label": "Bear Pride (PBIS)",
+          "url": "https://cms.cusdk8.org/community/bear-pride-pbis-clone"
+        },
+        {
+          "label": "After School Sports",
+          "url": "https://cms.cusdk8.org/student-life/after-school-sports"
+        }
+      ]
+    },
+    {
+      "fact": "School colors",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Origin of the name",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Former names",
+      "value": "*None found*",
+      "sources": []
+    },
+    {
+      "fact": "Programs",
+      "value": "Performing arts, athletics, leadership and Student Council, student clubs (including band, orchestra and Girls Who Code clubs); Bear Pride (PBIS); 8th Grade Yosemite Trip",
+      "sources": [
+        {
+          "label": "Student Life",
+          "url": "https://cms.cusdk8.org/student-life"
+        },
+        {
+          "label": "Clubs",
+          "url": "https://cms.cusdk8.org/student-life/clubs"
+        },
+        {
+          "label": "Bear Pride (PBIS)",
+          "url": "https://cms.cusdk8.org/community/bear-pride-pbis-clone"
+        },
+        {
+          "label": "School website",
+          "url": "https://cms.cusdk8.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Awards and recognitions",
+      "value": "*None found*",
+      "sources": []
+    }
+  ]
+}

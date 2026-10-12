@@ -1,0 +1,134 @@
+{
+  "nces_id": "060218414282",
+  "name": "KIPP Navigate College Prep",
+  "cds_code": "43771490137315",
+  "compiled": "2026-10-11",
+  "questions": [
+    "Has the school ever had another name?",
+    "What are the school's mascot and colors?",
+    "Is there a story behind the name \"Navigate\"?"
+  ],
+  "facts": [
+    {
+      "fact": "Official name",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "School type",
+      "value": "Public charter high school (charter #1955, directly funded; not magnet)",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=060218414282"
+        },
+        {
+          "label": "CA Dept. of Education school data 2025–26",
+          "url": "https://gis.data.ca.gov/datasets/CDEGIS::california-public-schools-2025-26"
+        }
+      ]
+    },
+    {
+      "fact": "Grades",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "District / charter authorizer",
+      "value": "Its own local education agency in federal data (\"KIPP Navigate College Prep District\"); the state lists the authorizer as the California State Board of Education (\"SBE - KIPP Navigate College Prep\"). The school sits within the East Side Union High School District area.",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=060218414282"
+        },
+        {
+          "label": "CA Dept. of Education",
+          "url": "https://sd.cde.ca.gov/schooldirectory/details?cdscode=43771490137315"
+        }
+      ]
+    },
+    {
+      "fact": "Address",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Enrollment",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Teachers",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Official website",
+      "value": "https://kippnorcal.org/school/kipp-navigate-college-prep/",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://kippnorcal.org/school/kipp-navigate-college-prep/"
+        }
+      ]
+    },
+    {
+      "fact": "Year opened",
+      "value": "2018 (state directory open date: August 14, 2018)",
+      "sources": [
+        {
+          "label": "CA Dept. of Education school data 2025–26",
+          "url": "https://gis.data.ca.gov/datasets/CDEGIS::california-public-schools-2025-26"
+        }
+      ]
+    },
+    {
+      "fact": "Mascot",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "School colors",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Origin of the name \"Navigate\"",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Former names",
+      "value": "*None found*",
+      "sources": []
+    },
+    {
+      "fact": "Programs",
+      "value": "College-prep coursework meeting UC A–G requirements; Advanced Placement; dual enrollment; electives including art, computer science and music; athletics (basketball, cross country, soccer, track and field, volleyball); clubs including robotics and student council",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://kippnorcal.org/school/kipp-navigate-college-prep/"
+        }
+      ]
+    },
+    {
+      "fact": "Awards and recognitions",
+      "value": "Accredited by ACS WASC (status: Accredited); 2026 California Distinguished School",
+      "sources": [
+        {
+          "label": "ACS WASC directory (search \"KIPP\")",
+          "url": "https://directory.acswasc.org/"
+        },
+        {
+          "label": "CCSA list of 2026 honorees",
+          "url": "https://www.ccsa.org/posts/california-charter-public-schools-earn-top-state-honor-as-2026-distinguished-schools"
+        },
+        {
+          "label": "CDE announcement",
+          "url": "https://www.cde.ca.gov/nr/ne/yr26/yr26rel12.asp"
+        }
+      ]
+    }
+  ]
+}

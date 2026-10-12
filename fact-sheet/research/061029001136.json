@@ -1,0 +1,147 @@
+{
+  "nces_id": "061029001136",
+  "name": "Hyde Middle School",
+  "cds_code": "43694196047096",
+  "compiled": "2026-10-11",
+  "questions": [
+    "Who was Warren E. Hyde, and why was the school named after him?",
+    "What year did Hyde open? (The state directory lists July 1, 1980, but that date appears on several older district schools, so it may be a record date rather than the opening year.)",
+    "What are the school colors?"
+  ],
+  "facts": [
+    {
+      "fact": "Official name",
+      "value": "Warren E. Hyde Middle School (commonly \"Hyde Middle School\")",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=061029001136"
+        },
+        {
+          "label": "School website",
+          "url": "https://hyde.cusdk8.org/"
+        }
+      ]
+    },
+    {
+      "fact": "School type",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Grades",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "District",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Address",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Enrollment",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Teachers",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Official website",
+      "value": "https://hyde.cusdk8.org/",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://hyde.cusdk8.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Year opened",
+      "value": "*Not found* (state directory open date: July 1, 1980)",
+      "sources": [
+        {
+          "label": "CA Dept. of Education",
+          "url": "https://sd.cde.ca.gov/schooldirectory/details?cdscode=43694196047096"
+        }
+      ]
+    },
+    {
+      "fact": "Mascot",
+      "value": "Lions",
+      "sources": [
+        {
+          "label": "About Us",
+          "url": "https://hyde.cusdk8.org/about-us"
+        }
+      ]
+    },
+    {
+      "fact": "School colors",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Named after",
+      "value": "Warren E. Hyde (who he was: *not found*)",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=061029001136"
+        }
+      ]
+    },
+    {
+      "fact": "Former names",
+      "value": "*None found*",
+      "sources": []
+    },
+    {
+      "fact": "Programs",
+      "value": "Elective courses; Associated Student Body (ASB); student clubs; after-school sports (Valley Junior High School Athletic League); Positive Behavioral Interventions & Supports (PBIS); PTSA",
+      "sources": [
+        {
+          "label": "Electives",
+          "url": "https://hyde.cusdk8.org/school-news/elective-selection-2025-26"
+        },
+        {
+          "label": "ASB",
+          "url": "https://hyde.cusdk8.org/fs/pages/4163"
+        },
+        {
+          "label": "Clubs",
+          "url": "https://hyde.cusdk8.org/fs/pages/4162"
+        },
+        {
+          "label": "After School Sports",
+          "url": "https://hyde.cusdk8.org/school-news/after-school-sports"
+        },
+        {
+          "label": "Handbook",
+          "url": "https://hyde.cusdk8.org/about-us/handbook"
+        }
+      ]
+    },
+    {
+      "fact": "Awards and recognitions",
+      "value": "2024 California Distinguished School",
+      "sources": [
+        {
+          "label": "CA Dept. of Education, Feb. 29, 2024",
+          "url": "https://www.cde.ca.gov/nr/ne/yr24/yr24rel09.asp"
+        },
+        {
+          "label": "School website",
+          "url": "https://hyde.cusdk8.org/"
+        }
+      ]
+    }
+  ]
+}

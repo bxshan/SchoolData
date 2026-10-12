@@ -1,0 +1,130 @@
+{
+  "nces_id": "061029011448",
+  "name": "Sam H. Lawson Middle School",
+  "cds_code": "43694190108126",
+  "compiled": "2026-10-11",
+  "questions": [
+    "Has Lawson ever had another name, or did it replace an earlier school on the same site?",
+    "What are the school mascot and school colors?",
+    "Your About Us page says Mr. Lawson was the first principal of the district's first junior high school. Which school was that?"
+  ],
+  "facts": [
+    {
+      "fact": "Official name",
+      "value": "Sam H. Lawson Middle School (federal record: \"Sam H. Lawson Middle\")",
+      "sources": [
+        {
+          "label": "NCES",
+          "url": "https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=061029011448"
+        },
+        {
+          "label": "About Us",
+          "url": "https://lawson.cusdk8.org/about-us"
+        },
+        {
+          "label": "School website",
+          "url": "https://lawson.cusdk8.org/"
+        }
+      ]
+    },
+    {
+      "fact": "School type",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Grades",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "District",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Address",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Enrollment",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Teachers",
+      "value": null,
+      "sources": []
+    },
+    {
+      "fact": "Official website",
+      "value": "https://lawson.cusdk8.org/",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://lawson.cusdk8.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Year opened",
+      "value": "2005–06 school year",
+      "sources": [
+        {
+          "label": "About Us",
+          "url": "https://lawson.cusdk8.org/about-us"
+        }
+      ]
+    },
+    {
+      "fact": "Mascot",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "School colors",
+      "value": "*Not found*",
+      "sources": []
+    },
+    {
+      "fact": "Origin of the name",
+      "value": "Named after Sam H. Lawson, a longtime Cupertino Union teacher and the first principal of the district's first junior high school",
+      "sources": [
+        {
+          "label": "About Us",
+          "url": "https://lawson.cusdk8.org/about-us"
+        }
+      ]
+    },
+    {
+      "fact": "Former names",
+      "value": "*None found*",
+      "sources": []
+    },
+    {
+      "fact": "Programs",
+      "value": "Student clubs and leadership opportunities; 7th and 8th grade electives; music ensembles; middle school sports; WEB (Where Everyone Belongs); Project Cornerstone",
+      "sources": [
+        {
+          "label": "About Us",
+          "url": "https://lawson.cusdk8.org/about-us"
+        },
+        {
+          "label": "School website",
+          "url": "https://lawson.cusdk8.org/"
+        }
+      ]
+    },
+    {
+      "fact": "Awards and recognitions",
+      "value": "California Distinguished School: 2013, 2021",
+      "sources": [
+        {
+          "label": "CA Dept. of Education, Distinguished Schools awardees 1986–2025 (XLSX)",
+          "url": "https://www.cde.ca.gov/ta/sr/cs/documents/dsawardees1.xlsx"
+        }
+      ]
+    }
+  ]
+}
